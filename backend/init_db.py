@@ -23,12 +23,12 @@ def init_db():
             admin = User(
                 username="admin",
                 email="admin@example.com",
-                password_hash=get_password_hash("admin123"),
+                password_hash=get_password_hash("123456"),
                 role="admin",
                 is_active=True
             )
             db.add(admin)
-            print("✓ 创建默认管理员账号: admin / admin123")
+            print("✓ 创建默认管理员账号: admin / 123456")
 
         # 检查是否已有知识库数据
         knowledge_count = db.query(Knowledge).count()
