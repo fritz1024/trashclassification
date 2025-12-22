@@ -89,8 +89,8 @@ class ChatConversation(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(200), nullable=False)  # 对话标题
     messages = Column(JSON, nullable=False)  # 消息列表 [{"role": "user", "content": "..."}, ...]
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now, index=True)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # 关系
     user = relationship("User", back_populates="chat_conversations")

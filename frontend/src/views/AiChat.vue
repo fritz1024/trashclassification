@@ -49,7 +49,7 @@
             <el-icon class="chat-icon"><ChatDotRound /></el-icon>
             <div class="chat-info">
               <div class="chat-title">{{ chat.title }}</div>
-              <div class="chat-time">{{ formatTime(chat.updatedAt) }}</div>
+              <div class="chat-time">{{ formatTime(chat.updated_at) }}</div>
             </div>
             <el-icon class="delete-icon" @click.stop="deleteChat(chat.id)"><Delete /></el-icon>
           </div>
