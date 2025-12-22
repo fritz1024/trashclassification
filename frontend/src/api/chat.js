@@ -26,3 +26,62 @@ export function checkHealth() {
     method: 'get'
   })
 }
+
+// ==================== 对话历史管理 API ====================
+
+/**
+ * 获取所有对话历史
+ */
+export function getConversations() {
+  return request({
+    url: '/chat/conversations',
+    method: 'get'
+  })
+}
+
+/**
+ * 获取指定对话详情
+ * @param {Number} conversationId - 对话ID
+ */
+export function getConversation(conversationId) {
+  return request({
+    url: `/chat/conversations/${conversationId}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 创建新对话
+ * @param {Object} data - {title: string, messages: Array}
+ */
+export function createConversation(data) {
+  return request({
+    url: '/chat/conversations',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 更新对话
+ * @param {Number} conversationId - 对话ID
+ * @param {Object} data - {title?: string, messages?: Array}
+ */
+export function updateConversation(conversationId, data) {
+  return request({
+    url: `/chat/conversations/${conversationId}`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 删除对话
+ * @param {Number} conversationId - 对话ID
+ */
+export function deleteConversation(conversationId) {
+  return request({
+    url: `/chat/conversations/${conversationId}`,
+    method: 'delete'
+  })
+}

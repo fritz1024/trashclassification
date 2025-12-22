@@ -171,7 +171,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
-import { sendMessage as sendChatMessage } from '@/api/chat'
+import { sendMessage as sendChatMessage, getConversations, createConversation, updateConversation, deleteConversation as deleteConversationAPI } from '@/api/chat'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
@@ -226,19 +226,21 @@ const currentMessages = computed(() => {
 })
 
 // 创建新对话
-const createNewChat = () => {
+const createNewChat = async () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    return
+  }
+
   const newChat = {
-    id: Date.now(),
+    id: Date.now(), // 临时 ID
     title: '新对话',
     messages: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    created_at: new Date(),
+    updated_at: new Date()
   }
   chatHistory.value.unshift(newChat)
   currentChatId.value = newChat.id
-
-  // 保存到 localStorage
-  saveChatHistory()
 }
 
 // 切换对话
@@ -256,6 +258,9 @@ const deleteChat = async (chatId) => {
       type: 'warning'
     })
 
+    // 调用后端 API 删除
+    await deleteConversationAPI(chatId)
+
     chatHistory.value = chatHistory.value.filter(c => c.id !== chatId)
 
     // 如果删除的是当前对话，切换到第一个对话或创建新对话
@@ -267,10 +272,12 @@ const deleteChat = async (chatId) => {
       }
     }
 
-    saveChatHistory()
     ElMessage.success('对话已删除')
-  } catch {
-    // 用户取消删除
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除对话失败:', error)
+      ElMessage.error('删除对话失败')
+    }
   }
 }
 
@@ -289,13 +296,22 @@ const clearCurrentChat = async () => {
     if (chat) {
       chat.messages = []
       chat.title = '新对话'
-      chat.updatedAt = new Date()
-      saveChatHistory()
+      chat.updated_at = new Date()
+
+      // 如果对话已经保存到后端，更新它
+      if (typeof chat.id === 'number' && chat.id < Date.now() - 1000000) {
+        await updateConversation(chat.id, {
+          title: chat.title,
+          messages: chat.messages
+        })
+      }
     }
 
     ElMessage.success('对话已清空')
-  } catch {
-    // 用户取消
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('清空对话失败:', error)
+    }
   }
 }
 
@@ -332,7 +348,7 @@ const sendMessage = async () => {
 
   // 如果没有当前对话，创建新对话
   if (!currentChatId.value) {
-    createNewChat()
+    await createNewChat()
   }
 
   const userMessage = inputMessage.value.trim()
@@ -348,11 +364,12 @@ const sendMessage = async () => {
   })
 
   // 如果是第一条消息，更新对话标题
-  if (chat.messages.length === 1) {
+  const isFirstMessage = chat.messages.length === 1
+  if (isFirstMessage) {
     chat.title = userMessage.length > 20 ? userMessage.substring(0, 20) + '...' : userMessage
   }
 
-  chat.updatedAt = new Date()
+  chat.updated_at = new Date()
   scrollToBottom()
 
   // 调用API
@@ -366,9 +383,11 @@ const sendMessage = async () => {
         role: 'assistant',
         content: response.reply
       })
-      chat.updatedAt = new Date()
+      chat.updated_at = new Date()
       scrollToBottom()
-      saveChatHistory()
+
+      // 保存到后端
+      await saveConversationToBackend(chat, isFirstMessage)
     } else {
       ElMessage.error(response.error || 'AI 服务暂时不可用')
     }
@@ -377,6 +396,42 @@ const sendMessage = async () => {
     ElMessage.error('发送消息失败，请稍后重试')
   } finally {
     loading.value = false
+  }
+}
+
+// 保存对话到后端
+const saveConversationToBackend = async (chat, isNew) => {
+  try {
+    // 判断是新对话还是更新对话
+    // 临时 ID 是大于当前时间戳的，后端返回的 ID 是小的
+    const isTemporaryId = chat.id > Date.now() - 1000000
+
+    if (isNew || isTemporaryId) {
+      // 创建新对话
+      const result = await createConversation({
+        title: chat.title,
+        messages: chat.messages
+      })
+      // 更新为后端返回的真实 ID
+      const oldId = chat.id
+      chat.id = result.id
+      chat.created_at = result.created_at
+      chat.updated_at = result.updated_at
+
+      // 更新 currentChatId
+      if (currentChatId.value === oldId) {
+        currentChatId.value = result.id
+      }
+    } else {
+      // 更新现有对话
+      await updateConversation(chat.id, {
+        title: chat.title,
+        messages: chat.messages
+      })
+    }
+  } catch (error) {
+    console.error('保存对话失败:', error)
+    // 不显示错误提示，避免打断用户体验
   }
 }
 
@@ -397,35 +452,30 @@ const formatTime = (date) => {
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-// 保存聊天历史到 localStorage
-const saveChatHistory = () => {
-  localStorage.setItem('ai_chat_history', JSON.stringify(chatHistory.value))
-}
-
-// 从 localStorage 加载聊天历史
-const loadChatHistory = () => {
-  const saved = localStorage.getItem('ai_chat_history')
-  if (saved) {
-    try {
-      chatHistory.value = JSON.parse(saved)
-      // 转换日期字符串为 Date 对象
-      chatHistory.value.forEach(chat => {
-        chat.createdAt = new Date(chat.createdAt)
-        chat.updatedAt = new Date(chat.updatedAt)
-      })
-
-      // 如果有历史对话，选中第一个
-      if (chatHistory.value.length > 0) {
-        currentChatId.value = chatHistory.value[0].id
-      }
-    } catch (error) {
-      console.error('加载聊天历史失败:', error)
-      chatHistory.value = []
-    }
+// 从后端加载聊天历史
+const loadChatHistory = async () => {
+  if (!userStore.isLoggedIn) {
+    // 未登录时，创建一个空的新对话
+    chatHistory.value = []
+    currentChatId.value = null
+    return
   }
 
-  // 如果没有历史对话，创建一个新对话
-  if (chatHistory.value.length === 0) {
+  try {
+    const conversations = await getConversations()
+    chatHistory.value = conversations
+
+    // 如果有历史对话，选中第一个
+    if (chatHistory.value.length > 0) {
+      currentChatId.value = chatHistory.value[0].id
+    } else {
+      // 如果没有历史对话，创建一个新对话
+      createNewChat()
+    }
+  } catch (error) {
+    console.error('加载聊天历史失败:', error)
+    // 加载失败时，创建一个新对话
+    chatHistory.value = []
     createNewChat()
   }
 }
@@ -442,7 +492,6 @@ watch(() => userStore.isLoggedIn, (newValue, oldValue) => {
     // 清除聊天历史
     chatHistory.value = []
     currentChatId.value = null
-    localStorage.removeItem('ai_chat_history')
     console.log('用户退出登录，已清除聊天历史')
   }
   // 如果从未登录变为登录状态

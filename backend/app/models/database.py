@@ -25,6 +25,7 @@ class User(Base):
     # 关系
     predictions = relationship("Prediction", back_populates="user")
     feedbacks = relationship("Feedback", back_populates="user")
+    chat_conversations = relationship("ChatConversation", back_populates="user")
 
 
 class Prediction(Base):
@@ -78,3 +79,18 @@ class Knowledge(Base):
     image_url = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ChatConversation(Base):
+    """AI 聊天对话表"""
+    __tablename__ = "chat_conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(200), nullable=False)  # 对话标题
+    messages = Column(JSON, nullable=False)  # 消息列表 [{"role": "user", "content": "..."}, ...]
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关系
+    user = relationship("User", back_populates="chat_conversations")
