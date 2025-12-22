@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.database import engine
 from app.core.logger import logger
 from app.models.database import Base
-from app.api import auth, predict, stats, admin, knowledge
+from app.api import auth, predict, stats, admin, knowledge, chat
 import os
 import time
 
@@ -73,6 +73,7 @@ app.include_router(predict.router)
 app.include_router(stats.router)
 app.include_router(admin.router)
 app.include_router(knowledge.router)
+app.include_router(chat.router)
 logger.info("所有路由已注册")
 
 

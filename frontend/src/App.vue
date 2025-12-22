@@ -136,6 +136,9 @@
         <el-button type="primary" @click="handleRegister" :loading="registerLoading">注册</el-button>
       </template>
     </el-dialog>
+
+    <!-- AI 聊天助手悬浮窗口 -->
+    <ChatWidget />
   </div>
 </template>
 
@@ -145,6 +148,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { useThemeStore } from '@/store/theme'
 import { ElMessage } from 'element-plus'
+import ChatWidget from '@/components/ChatWidget.vue'
 
 const route = useRoute()
 const router = useRouter()

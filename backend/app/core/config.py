@@ -43,6 +43,9 @@ class Settings(BaseSettings):
         "http://localhost:3000",
     ]
 
+    # AI配置 - 通义千问
+    DASHSCOPE_API_KEY: Optional[str] = None
+
     class Config:
         env_file = ".env"
 
