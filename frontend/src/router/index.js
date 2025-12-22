@@ -37,6 +37,11 @@ const routes = [
     component: () => import('@/views/Profile.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/ai-chat',
+    name: 'AiChat',
+    component: () => import('@/views/AiChat.vue')
+  },
 
   // 管理端路由
   {

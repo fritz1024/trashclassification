@@ -16,6 +16,7 @@
           >
             <el-menu-item index="/">首页</el-menu-item>
             <el-menu-item index="/classify">智能识别</el-menu-item>
+            <el-menu-item index="/ai-chat">AI 助手</el-menu-item>
             <el-menu-item index="/knowledge">知识科普</el-menu-item>
             <el-menu-item index="/history" v-if="userStore.isLoggedIn">识别历史</el-menu-item>
             <el-menu-item index="/stats" v-if="userStore.isLoggedIn">数据统计</el-menu-item>
@@ -137,8 +138,8 @@
       </template>
     </el-dialog>
 
-    <!-- AI 聊天助手悬浮窗口 -->
-    <ChatWidget />
+    <!-- AI 聊天助手悬浮窗口（在 AI 助手页面隐藏） -->
+    <ChatWidget v-if="route.path !== '/ai-chat'" />
   </div>
 </template>
 

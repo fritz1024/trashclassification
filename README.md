@@ -86,6 +86,10 @@ pip install -r requirements.txt
 # 复制环境变量配置文件
 cp .env.example .env
 
+# 编辑 .env 文件，配置通义千问 API Key（可选，用于 AI 聊天功能）
+# DASHSCOPE_API_KEY=your-dashscope-api-key
+# 获取 API Key：https://bailian.console.aliyun.com/
+
 # 初始化数据库（创建表和默认管理员账号）
 python init_db.py
 
@@ -142,12 +146,20 @@ npm run dev
    - 分类占比图表
    - 识别趋势分析
 
-4. **知识科普**（游客可用）
+4. **AI 聊天助手**（需登录）
+   - 智能问答，解答垃圾分类问题
+   - 多轮对话，支持上下文理解
+   - 对话历史管理，支持多个独立对话
+   - Markdown 格式渲染，美观易读
+   - 快捷问题按钮，快速开始对话
+   - 悬浮窗口模式，随时随地咨询
+
+5. **知识科普**（游客可用）
    - 垃圾分类知识库
    - 分类浏览
    - 处理建议
 
-5. **用户中心**（需登录）
+6. **用户中心**（需登录）
    - 个人信息管理
    - 修改密码
 
@@ -186,6 +198,10 @@ npm run dev
 - `POST /api/predict/batch` - 批量识别
 - `GET /api/predict/history` - 获取识别历史
 - `DELETE /api/predict/{id}` - 删除识别记录
+
+### AI 聊天相关
+- `POST /api/chat/` - 发送聊天消息
+- `GET /api/chat/health` - 检查 AI 服务状态
 
 ### 统计相关
 - `GET /api/stats/user` - 用户统计
@@ -321,7 +337,7 @@ MIT License
 
 ## 联系方式
 
-如有问题，请联系：[你的邮箱]
+如有问题，请联系：[c3283595227@gmail.com]
 
 ---
 
