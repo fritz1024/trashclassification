@@ -15,7 +15,7 @@ from app.services.ai_service import ai_service
 from app.core.logger import logger
 from app.core.database import get_db
 from app.models.database import ChatConversation, User
-from app.core.security import get_current_user
+from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/api/chat", tags=["AI聊天"])
 
