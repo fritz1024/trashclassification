@@ -40,6 +40,7 @@ class Prediction(Base):
     confidence = Column(Float, nullable=False)
     top3_results = Column(JSON, nullable=True)  # 存储Top3结果
     is_correct = Column(Boolean, nullable=True)  # 用户反馈是否正确
+    model_name = Column(String(100), nullable=True)  # 使用的模型名称
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     # 关系
@@ -66,21 +67,6 @@ class Feedback(Base):
     prediction = relationship("Prediction", back_populates="feedbacks")
 
 
-class Knowledge(Base):
-    """垃圾分类知识库表"""
-    __tablename__ = "knowledge"
-
-    id = Column(Integer, primary_key=True, index=True)
-    category = Column(String(50), nullable=False, index=True)  # 可回收/有害/厨余/其他
-    title = Column(String(200), nullable=False)
-    content = Column(Text, nullable=False)
-    examples = Column(JSON, nullable=True)  # 示例列表
-    tips = Column(Text, nullable=True)  # 处理建议
-    image_url = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
 class ChatConversation(Base):
     """AI 聊天对话表"""
     __tablename__ = "chat_conversations"
@@ -94,3 +80,16 @@ class ChatConversation(Base):
 
     # 关系
     user = relationship("User", back_populates="chat_conversations")
+
+class Announcement(Base):
+    """系统公告表"""
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)  # 公告标题
+    content = Column(Text, nullable=False)  # 公告内容
+    type = Column(String(20), default="info")  # info, warning, success, error
+    is_published = Column(Boolean, default=True)  # 是否发布
+    priority = Column(Integer, default=0)  # 优先级，数字越大越靠前
+    created_at = Column(DateTime, default=datetime.now, index=True)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

@@ -1,5 +1,22 @@
 <template>
   <div class="home">
+    <!-- 公告区域 -->
+    <el-row :gutter="20" v-if="announcements.length > 0">
+      <el-col :span="24">
+        <el-alert
+          v-for="announcement in announcements"
+          :key="announcement.id"
+          :title="announcement.title"
+          :type="announcement.type"
+          :closable="true"
+          show-icon
+          style="margin-bottom: 16px;"
+        >
+          {{ announcement.content }}
+        </el-alert>
+      </el-col>
+    </el-row>
+
     <el-row :gutter="20">
       <el-col :span="24">
         <div class="hero-section">
@@ -51,6 +68,30 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const announcements = ref([])
+
+// 获取已发布的公告
+const fetchAnnouncements = async () => {
+  try {
+    const response = await axios.get('/api/announcements/list', {
+      params: {
+        skip: 0,
+        limit: 5,
+        published_only: true
+      }
+    })
+    announcements.value = response.data.items
+  } catch (error) {
+    console.error('获取公告失败:', error)
+  }
+}
+
+onMounted(() => {
+  fetchAnnouncements()
+})
 </script>
 
 <style scoped>

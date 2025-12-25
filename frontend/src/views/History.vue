@@ -2,10 +2,64 @@
   <div class="history">
     <el-card>
       <template #header>
-        <h2>识别历史</h2>
+        <div class="header-wrapper">
+          <h2>识别历史</h2>
+          <div class="header-actions">
+            <el-button
+              type="danger"
+              :icon="Delete"
+              @click="handleBatchDelete"
+              :disabled="selectedIds.length === 0"
+            >
+              批量删除 ({{ selectedIds.length }})
+            </el-button>
+            <el-button
+              type="primary"
+              :icon="Download"
+              @click="handleExport"
+              :loading="exportLoading"
+            >
+              导出数据
+            </el-button>
+          </div>
+        </div>
       </template>
 
-      <el-table :data="historyList" style="width: 100%" v-loading="loading">
+      <!-- 筛选工具栏 -->
+      <div class="filter-toolbar">
+        <el-form :inline="true" :model="filterForm">
+          <el-form-item label="分类">
+            <el-select v-model="filterForm.category" placeholder="全部分类" clearable style="width: 150px">
+              <el-option label="可回收物" value="可回收物" />
+              <el-option label="有害垃圾" value="有害垃圾" />
+              <el-option label="厨余垃圾" value="厨余垃圾" />
+              <el-option label="其他垃圾" value="其他垃圾" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="时间范围">
+            <el-date-picker
+              v-model="filterForm.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              style="width: 240px"
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleFilter">筛选</el-button>
+            <el-button @click="handleResetFilter">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <el-table
+        :data="historyList"
+        style="width: 100%"
+        v-loading="loading"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
         <el-table-column label="序号" width="80">
           <template #default="scope">
             {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
@@ -78,10 +132,16 @@
           <el-input v-model="feedbackForm.predicted_class" disabled />
         </el-form-item>
         <el-form-item label="正确分类" required>
-          <el-input
+          <el-select
             v-model="feedbackForm.correct_class"
-            placeholder="请输入正确的垃圾分类"
-          />
+            placeholder="请选择正确的垃圾分类"
+            style="width: 100%"
+          >
+            <el-option label="可回收物" value="可回收物" />
+            <el-option label="有害垃圾" value="有害垃圾" />
+            <el-option label="厨余垃圾" value="厨余垃圾" />
+            <el-option label="其他垃圾" value="其他垃圾" />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注说明">
           <el-input
@@ -107,14 +167,25 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getPredictionHistory, deletePrediction, submitFeedback } from '@/api/predict'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download, Delete } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/date'
+import * as XLSX from 'xlsx'
 
 const route = useRoute()
 const historyList = ref([])
 const loading = ref(false)
+const exportLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
+const selectedIds = ref([])
+const selectedRows = ref([])
+
+// 筛选条件
+const filterForm = ref({
+  category: '',
+  dateRange: null
+})
 
 // 反馈相关
 const showFeedbackDialog = ref(false)
@@ -129,10 +200,23 @@ const feedbackForm = ref({
 const fetchHistory = async () => {
   loading.value = true
   try {
-    const response = await getPredictionHistory({
+    // 构建查询参数
+    const params = {
       skip: (currentPage.value - 1) * pageSize.value,
       limit: pageSize.value
-    })
+    }
+
+    // 添加筛选条件
+    if (filterForm.value.category) {
+      params.predicted_class = filterForm.value.category
+    }
+
+    if (filterForm.value.dateRange && filterForm.value.dateRange.length === 2) {
+      params.start_date = filterForm.value.dateRange[0].toISOString().split('T')[0]
+      params.end_date = filterForm.value.dateRange[1].toISOString().split('T')[0]
+    }
+
+    const response = await getPredictionHistory(params)
     historyList.value = response.items
     total.value = response.total
   } catch (error) {
@@ -156,6 +240,62 @@ const handleDelete = async (id) => {
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
+    }
+  }
+}
+
+// 筛选
+const handleFilter = () => {
+  currentPage.value = 1 // 重置到第一页
+  fetchHistory()
+}
+
+// 重置筛选
+const handleResetFilter = () => {
+  filterForm.value = {
+    category: '',
+    dateRange: null
+  }
+  currentPage.value = 1
+  fetchHistory()
+}
+
+// 处理选择变化
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+  selectedIds.value = selection.map(row => row.id)
+}
+
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先选择要删除的记录')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedIds.value.length} 条记录吗？`,
+      '批量删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // 逐个删除
+    for (const id of selectedIds.value) {
+      await deletePrediction(id)
+    }
+
+    ElMessage.success('批量删除成功')
+    selectedIds.value = []
+    selectedRows.value = []
+    fetchHistory()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败')
     }
   }
 }
@@ -198,6 +338,45 @@ const handleSubmitFeedback = async () => {
   }
 }
 
+// 导出数据
+const handleExport = async () => {
+  // 检查是否有选中的数据
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先勾选要导出的数据')
+    return
+  }
+
+  exportLoading.value = true
+  try {
+    // 准备导出数据（使用序号而不是ID）
+    const exportData = selectedRows.value.map((row, index) => ({
+      '序号': index + 1,
+      '分类结果': row.predicted_class,
+      '置信度': `${row.confidence}%`,
+      '识别时间': formatDateTime(row.created_at),
+      '图片文件名': row.image_path.split('/').pop()
+    }))
+
+    // 创建工作表
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
+
+    // 创建工作簿
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '识别历史')
+
+    // 生成文件并下载
+    const filename = `识别历史_${new Date().getTime()}.xlsx`
+    XLSX.writeFile(workbook, filename)
+
+    ElMessage.success(`成功导出 ${selectedIds.value.length} 条数据`)
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败，请重试')
+  } finally {
+    exportLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchHistory()
 })
@@ -214,6 +393,32 @@ watch(() => route.path, (newPath) => {
 .history {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-wrapper h2 {
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-toolbar {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.filter-toolbar :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .pagination-wrapper {

@@ -15,11 +15,6 @@ const routes = [
     component: () => import('@/views/Classify.vue')
   },
   {
-    path: '/knowledge',
-    name: 'Knowledge',
-    component: () => import('@/views/Knowledge.vue')
-  },
-  {
     path: '/history',
     name: 'History',
     component: () => import('@/views/History.vue'),
@@ -74,9 +69,15 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
-    path: '/admin/knowledge',
-    name: 'AdminKnowledge',
-    component: () => import('@/views/admin/Knowledge.vue'),
+    path: '/admin/model',
+    name: 'AdminModel',
+    component: () => import('@/views/admin/Model.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/announcements',
+    name: 'AdminAnnouncements',
+    component: () => import('@/views/admin/Announcements.vue'),
     meta: { requiresAdmin: true }
   }
 ]

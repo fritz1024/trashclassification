@@ -3,9 +3,9 @@
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 from app.core.database import get_db
-from app.models.database import User, Prediction
+from app.models.database import User, Prediction, Feedback
 from app.api.auth import get_current_user, require_admin
 from typing import Dict, List
 from datetime import datetime, timedelta
@@ -121,4 +121,106 @@ def get_global_stats(
             {"date": str(date), "count": count}
             for date, count in daily_stats
         ]
+    }
+
+
+@router.get("/user-activity")
+def get_user_activity_stats(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+) -> Dict:
+    """获取用户活跃度分析数据（管理员）"""
+    # 最近30天每日活跃用户数
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    daily_active_users = db.query(
+        func.date(Prediction.created_at).label('date'),
+        func.count(func.distinct(Prediction.user_id)).label('active_users')
+    ).filter(
+        Prediction.created_at >= thirty_days_ago,
+        Prediction.user_id.isnot(None)
+    ).group_by(
+        func.date(Prediction.created_at)
+    ).all()
+
+    # 活跃用户排行榜（Top 10）
+    top_active_users = db.query(
+        User.id,
+        User.username,
+        func.count(Prediction.id).label('prediction_count')
+    ).join(
+        Prediction, User.id == Prediction.user_id
+    ).filter(
+        Prediction.created_at >= thirty_days_ago
+    ).group_by(
+        User.id, User.username
+    ).order_by(
+        func.count(Prediction.id).desc()
+    ).limit(10).all()
+
+    return {
+        "daily_active_users": [
+            {"date": str(date), "count": count}
+            for date, count in daily_active_users
+        ],
+        "top_active_users": [
+            {
+                "user_id": user_id,
+                "username": username,
+                "prediction_count": count
+            }
+            for user_id, username, count in top_active_users
+        ]
+    }
+
+
+@router.get("/accuracy")
+def get_accuracy_stats(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_admin)
+) -> Dict:
+    """获取识别准确率分析数据（基于置信度估算）"""
+    # 总识别次数
+    total_predictions = db.query(Prediction).count()
+
+    # 按置信度区间统计
+    confidence_ranges = [
+        {"range": "90-100%", "min": 90, "max": 100},
+        {"range": "80-90%", "min": 80, "max": 90},
+        {"range": "70-80%", "min": 70, "max": 80},
+        {"range": "60-70%", "min": 60, "max": 70},
+        {"range": "0-60%", "min": 0, "max": 60}
+    ]
+
+    confidence_distribution = []
+    for range_info in confidence_ranges:
+        count = db.query(Prediction).filter(
+            Prediction.confidence >= range_info["min"],
+            Prediction.confidence < range_info["max"]
+        ).count()
+        confidence_distribution.append({
+            "range": range_info["range"],
+            "count": count,
+            "percentage": round(count / total_predictions * 100, 2) if total_predictions > 0 else 0
+        })
+
+    # 高置信度识别数量（>=80%）
+    high_confidence_count = db.query(Prediction).filter(
+        Prediction.confidence >= 80
+    ).count()
+
+    # 平均置信度
+    avg_confidence = db.query(
+        func.avg(Prediction.confidence)
+    ).scalar() or 0
+
+    # 预估准确率（基于置信度的经验公式）
+    # 高置信度(>=80%)的识别通常准确率较高
+    estimated_accuracy = round(avg_confidence * 0.9, 2)  # 经验系数0.9
+
+    return {
+        "total_predictions": total_predictions,
+        "high_confidence_count": high_confidence_count,
+        "avg_confidence": round(avg_confidence, 2),
+        "estimated_accuracy": estimated_accuracy,
+        "confidence_distribution": confidence_distribution
     }

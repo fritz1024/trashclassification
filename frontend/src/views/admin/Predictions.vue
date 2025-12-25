@@ -20,10 +20,13 @@
           </el-button>
         </div>
         <div class="toolbar-right">
+          <el-button type="success" :icon="Download" @click="handleExport" :loading="exportLoading">
+            导出数据
+          </el-button>
           <el-input
             v-model="searchClass"
             placeholder="搜索分类"
-            style="width: 200px; margin-right: 10px;"
+            style="width: 200px; margin: 0 10px;"
             clearable
             @clear="handleSearch"
             @keyup.enter="handleSearch"
@@ -104,10 +107,13 @@
 import { ref, onMounted } from 'vue'
 import { getAllPredictions, deletePredictionAdmin } from '@/api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/date'
+import * as XLSX from 'xlsx'
 
 const predictionList = ref([])
 const loading = ref(false)
+const exportLoading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -192,6 +198,48 @@ const handleBatchDelete = async () => {
     if (error !== 'cancel') {
       ElMessage.error('批量删除失败')
     }
+  }
+}
+
+// 导出数据
+const handleExport = async () => {
+  // 检查是否有选中的数据
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先勾选要导出的数据')
+    return
+  }
+
+  exportLoading.value = true
+  try {
+    // 准备导出数据（只导出选中的）
+    const exportData = predictionList.value
+      .filter(row => selectedIds.value.includes(row.id))
+      .map((row, index) => ({
+        '序号': index + 1,
+        '用户名': row.username,
+        '分类结果': row.predicted_class,
+        '置信度': `${row.confidence}%`,
+        '识别时间': formatDateTime(row.created_at),
+        '图片文件名': row.image_path.split('/').pop()
+      }))
+
+    // 创建工作表
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
+
+    // 创建工作簿
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, '识别记录')
+
+    // 生成文件并下载
+    const filename = `识别记录_${new Date().getTime()}.xlsx`
+    XLSX.writeFile(workbook, filename)
+
+    ElMessage.success(`成功导出 ${selectedIds.value.length} 条数据`)
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败，请重试')
+  } finally {
+    exportLoading.value = false
   }
 }
 

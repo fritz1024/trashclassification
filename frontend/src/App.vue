@@ -17,7 +17,6 @@
             <el-menu-item index="/">首页</el-menu-item>
             <el-menu-item index="/classify">智能识别</el-menu-item>
             <el-menu-item index="/ai-chat">AI 助手</el-menu-item>
-            <el-menu-item index="/knowledge">知识科普</el-menu-item>
             <el-menu-item index="/history" v-if="userStore.isLoggedIn">识别历史</el-menu-item>
             <el-menu-item index="/stats" v-if="userStore.isLoggedIn">数据统计</el-menu-item>
             <el-sub-menu index="admin" v-if="userStore.isLoggedIn && userStore.user?.role === 'admin'">
@@ -26,7 +25,8 @@
               <el-menu-item index="/admin/predictions">识别记录</el-menu-item>
               <el-menu-item index="/admin/users">用户管理</el-menu-item>
               <el-menu-item index="/admin/feedbacks">反馈管理</el-menu-item>
-              <el-menu-item index="/admin/knowledge">知识库管理</el-menu-item>
+              <el-menu-item index="/admin/model">模型管理</el-menu-item>
+              <el-menu-item index="/admin/announcements">公告管理</el-menu-item>
             </el-sub-menu>
           </el-menu>
           <div class="user-actions">

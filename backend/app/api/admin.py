@@ -2,15 +2,19 @@
 管理端API路由
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import Optional, List
 from datetime import datetime, timedelta
+from pydantic import BaseModel
 from app.core.database import get_db
-from app.models.database import User, Prediction, Feedback, Knowledge
+from app.models.database import User, Prediction, Feedback
 from app.api.auth import require_admin
 from app.schemas.prediction import PredictionListResponse
-from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
+from app.services.export_service import export_service
+import io
+import os
 
 router = APIRouter(prefix="/api/admin", tags=["管理端"])
 
@@ -223,6 +227,37 @@ def delete_user(
     return {"message": "用户删除成功"}
 
 
+class PasswordResetRequest(BaseModel):
+    """重置密码请求模型"""
+    new_password: str
+
+
+@router.put("/users/{user_id}/password")
+def reset_user_password(
+    user_id: int,
+    password_data: PasswordResetRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """重置用户密码（管理员）"""
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+
+    # 加密新密码
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    user.password_hash = pwd_context.hash(password_data.new_password)
+
+    db.commit()
+
+    return {"message": "密码重置成功"}
+
+
 @router.get("/feedbacks")
 def get_all_feedbacks(
     skip: int = Query(0, ge=0),
@@ -308,110 +343,85 @@ def update_feedback_status(
     return {"message": "状态更新成功"}
 
 
-@router.get("/knowledge")
-def get_all_knowledge_admin(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    category: Optional[str] = None,
+@router.get("/predictions/export")
+def export_all_predictions(
+    user_id: Optional[int] = None,
+    predicted_class: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    """获取所有知识（管理员）"""
-    query = db.query(Knowledge)
+    """
+    导出所有识别记录为 CSV 文件（管理员）
+    支持筛选条件
+    """
+    try:
+        query = db.query(Prediction)
 
-    # 按分类筛选
-    if category:
-        query = query.filter(Knowledge.category == category)
+        # 应用筛选条件
+        if user_id:
+            query = query.filter(Prediction.user_id == user_id)
+        if predicted_class:
+            query = query.filter(Prediction.predicted_class.like(f"%{predicted_class}%"))
+        if start_date:
+            query = query.filter(Prediction.created_at >= start_date)
+        if end_date:
+            query = query.filter(Prediction.created_at <= end_date)
 
-    # 查询总数
-    total = query.count()
+        # 查询所有记录
+        predictions = query.order_by(desc(Prediction.created_at)).all()
 
-    # 查询知识列表
-    knowledge_list = (
-        query
-        .order_by(desc(Knowledge.created_at))
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+        # 准备导出数据
+        export_data = []
+        for pred in predictions:
+            # 安全处理置信度格式
+            confidence_value = pred.confidence
+            if confidence_value > 1:
+                # 如果已经是百分比格式（如 95.0）
+                confidence_str = f"{confidence_value:.2f}%"
+            else:
+                # 如果是小数格式（如 0.95）
+                confidence_str = f"{confidence_value * 100:.2f}%"
 
-    return {
-        "total": total,
-        "items": knowledge_list
-    }
+            export_data.append({
+                'id': pred.id,
+                'username': pred.user.username if pred.user else '游客',
+                'predicted_class': pred.predicted_class,
+                'confidence': confidence_str,
+                'created_at': pred.created_at,
+                'image_path': os.path.basename(pred.image_path)
+            })
 
+        # 定义列
+        columns = [
+            {'key': 'id', 'label': 'ID'},
+            {'key': 'username', 'label': '用户名'},
+            {'key': 'predicted_class', 'label': '分类结果'},
+            {'key': 'confidence', 'label': '置信度'},
+            {'key': 'created_at', 'label': '识别时间'},
+            {'key': 'image_path', 'label': '图片文件名'}
+        ]
 
-@router.post("/knowledge")
-def create_knowledge(
-    knowledge_data: KnowledgeCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
-):
-    """创建知识（管理员）"""
-    knowledge = Knowledge(
-        category=knowledge_data.category,
-        title=knowledge_data.title,
-        content=knowledge_data.content,
-        examples=knowledge_data.examples,
-        tips=knowledge_data.tips
-    )
+        # 导出为 CSV
+        csv_data = export_service.export_to_csv(export_data, columns)
 
-    db.add(knowledge)
-    db.commit()
-    db.refresh(knowledge)
+        # 生成文件名（URL 编码以支持中文）
+        from urllib.parse import quote
+        filename = f"识别记录_全部_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        encoded_filename = quote(filename)
 
-    return knowledge
-
-
-@router.put("/knowledge/{knowledge_id}")
-def update_knowledge(
-    knowledge_id: int,
-    knowledge_data: KnowledgeUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
-):
-    """更新知识（管理员）"""
-    knowledge = db.query(Knowledge).filter(Knowledge.id == knowledge_id).first()
-
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="知识不存在"
+        # 返回文件流
+        return StreamingResponse(
+            io.BytesIO(csv_data),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
         )
 
-    if knowledge_data.category is not None:
-        knowledge.category = knowledge_data.category
-    if knowledge_data.title is not None:
-        knowledge.title = knowledge_data.title
-    if knowledge_data.content is not None:
-        knowledge.content = knowledge_data.content
-    if knowledge_data.examples is not None:
-        knowledge.examples = knowledge_data.examples
-    if knowledge_data.tips is not None:
-        knowledge.tips = knowledge_data.tips
-
-    knowledge.updated_at = datetime.now()
-    db.commit()
-
-    return knowledge
-
-
-@router.delete("/knowledge/{knowledge_id}")
-def delete_knowledge(
-    knowledge_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
-):
-    """删除知识（管理员）"""
-    knowledge = db.query(Knowledge).filter(Knowledge.id == knowledge_id).first()
-
-    if not knowledge:
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="知识不存在"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"导出失败: {str(e)}"
         )
-
-    db.delete(knowledge)
-    db.commit()
-
-    return {"message": "删除成功"}

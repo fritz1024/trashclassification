@@ -27,6 +27,13 @@ export const deleteUser = (userId) => {
   return request.delete(`/admin/users/${userId}`)
 }
 
+// 重置用户密码（管理员）
+export const resetUserPassword = (userId, newPassword) => {
+  return request.put(`/admin/users/${userId}/password`, {
+    new_password: newPassword
+  })
+}
+
 // 获取所有反馈（管理员）
 export const getAllFeedbacks = (params) => {
   return request.get('/admin/feedbacks', { params })

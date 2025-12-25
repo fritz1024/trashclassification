@@ -2,6 +2,7 @@
 图片识别相关API路由
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.core.database import get_db
@@ -9,9 +10,12 @@ from app.schemas.prediction import PredictionResponse, PredictionListResponse
 from app.schemas.feedback import FeedbackCreate, FeedbackResponse
 from app.models.database import User, Prediction, Feedback
 from app.services.model_service import model_service
+from app.services.export_service import export_service
 from app.api.auth import get_current_user, get_current_user_optional
+from app.api.model import get_current_model_config
 import os
 import uuid
+import io
 from datetime import datetime
 from app.core.config import settings
 
@@ -60,6 +64,10 @@ async def predict_single(
         class_id, confidence, top3_results = model_service.predict(file_path)
         class_name = model_service.get_class_name(class_id)
 
+        # 获取当前使用的模型名称
+        current_model_config = get_current_model_config()
+        model_name = current_model_config.get("model_file", "best_model.pth")
+
         # 创建识别记录
         prediction = Prediction(
             user_id=current_user.id if current_user else None,
@@ -67,7 +75,8 @@ async def predict_single(
             predicted_class=class_name,
             predicted_class_id=class_id,
             confidence=confidence,
-            top3_results=top3_results
+            top3_results=top3_results,
+            model_name=model_name
         )
 
         db.add(prediction)
@@ -96,6 +105,10 @@ async def predict_batch(
             detail="单次最多上传10张图片"
         )
 
+    # 获取当前使用的模型名称
+    current_model_config = get_current_model_config()
+    model_name = current_model_config.get("model_file", "best_model.pth")
+
     results = []
 
     for file in files:
@@ -114,7 +127,8 @@ async def predict_batch(
                 predicted_class=class_name,
                 predicted_class_id=class_id,
                 confidence=confidence,
-                top3_results=top3_results
+                top3_results=top3_results,
+                model_name=model_name
             )
 
             db.add(prediction)
@@ -134,17 +148,35 @@ async def predict_batch(
 def get_prediction_history(
     skip: int = 0,
     limit: int = 20,
+    predicted_class: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """获取用户识别历史（需要登录）"""
+    """获取用户识别历史（需要登录，支持筛选）"""
+    # 构建查询
+    query = db.query(Prediction).filter(Prediction.user_id == current_user.id)
+
+    # 添加分类筛选
+    if predicted_class:
+        query = query.filter(Prediction.predicted_class.like(f"%{predicted_class}%"))
+
+    # 添加日期范围筛选
+    if start_date:
+        query = query.filter(Prediction.created_at >= start_date)
+    if end_date:
+        # 结束日期包含当天，所以加一天
+        from datetime import datetime, timedelta
+        end_datetime = datetime.fromisoformat(end_date) + timedelta(days=1)
+        query = query.filter(Prediction.created_at < end_datetime)
+
     # 查询总数
-    total = db.query(Prediction).filter(Prediction.user_id == current_user.id).count()
+    total = query.count()
 
     # 查询记录
     predictions = (
-        db.query(Prediction)
-        .filter(Prediction.user_id == current_user.id)
+        query
         .order_by(Prediction.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -179,7 +211,10 @@ def delete_prediction(
     if os.path.exists(prediction.image_path):
         os.remove(prediction.image_path)
 
-    # 删除数据库记录
+    # 先删除关联的反馈记录
+    db.query(Feedback).filter(Feedback.prediction_id == prediction_id).delete()
+
+    # 再删除识别记录
     db.delete(prediction)
     db.commit()
 
@@ -231,3 +266,73 @@ def submit_feedback(
     db.refresh(feedback)
 
     return feedback
+
+
+@router.get("/export")
+def export_predictions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    导出用户识别历史为 CSV 文件（需要登录）
+    """
+    try:
+        # 查询用户的所有识别记录
+        predictions = (
+            db.query(Prediction)
+            .filter(Prediction.user_id == current_user.id)
+            .order_by(Prediction.created_at.desc())
+            .all()
+        )
+
+        # 准备导出数据
+        export_data = []
+        for pred in predictions:
+            # 安全处理置信度格式
+            confidence_value = pred.confidence
+            if confidence_value > 1:
+                # 如果已经是百分比格式（如 95.0）
+                confidence_str = f"{confidence_value:.2f}%"
+            else:
+                # 如果是小数格式（如 0.95）
+                confidence_str = f"{confidence_value * 100:.2f}%"
+
+            export_data.append({
+                'id': pred.id,
+                'predicted_class': pred.predicted_class,
+                'confidence': confidence_str,
+                'created_at': pred.created_at,
+                'image_path': os.path.basename(pred.image_path)
+            })
+
+        # 定义列
+        columns = [
+            {'key': 'id', 'label': 'ID'},
+            {'key': 'predicted_class', 'label': '分类结果'},
+            {'key': 'confidence', 'label': '置信度'},
+            {'key': 'created_at', 'label': '识别时间'},
+            {'key': 'image_path', 'label': '图片文件名'}
+        ]
+
+        # 导出为 CSV
+        csv_data = export_service.export_to_csv(export_data, columns)
+
+        # 生成文件名（URL 编码以支持中文）
+        from urllib.parse import quote
+        filename = f"识别历史_{current_user.username}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        encoded_filename = quote(filename)
+
+        # 返回文件流
+        return StreamingResponse(
+            io.BytesIO(csv_data),
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"导出失败: {str(e)}"
+        )

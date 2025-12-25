@@ -2,7 +2,12 @@
   <div class="classify">
     <el-card>
       <template #header>
-        <h2>智能垃圾识别</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>智能垃圾识别</h2>
+          <el-tag v-if="currentModel" type="info">
+            当前模型: {{ currentModel }}
+          </el-tag>
+        </div>
       </template>
 
       <el-tabs v-model="activeTab">
@@ -235,13 +240,15 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { predictSingle, predictBatch, submitFeedback } from '@/api/predict'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 const userStore = useUserStore()
 
+const currentModel = ref('')
 const activeTab = ref('single')
 const previewImage = ref('')
 const currentFile = ref(null)
@@ -459,6 +466,21 @@ const handleSubmitFeedback = async () => {
 const handleShowLogin = () => {
   ElMessage.info('请点击右上角的"登录"按钮进行登录')
 }
+
+// 获取当前模型信息
+const fetchCurrentModel = async () => {
+  try {
+    const response = await axios.get('/api/model/current')
+    currentModel.value = response.data.model_file || ''
+  } catch (error) {
+    console.error('获取当前模型信息失败:', error)
+  }
+}
+
+// 页面加载时获取当前模型信息
+onMounted(() => {
+  fetchCurrentModel()
+})
 </script>
 
 <style scoped>

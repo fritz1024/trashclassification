@@ -82,7 +82,7 @@
             {{ formatDateTime(scope.row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="scope">
             <el-button
               :type="scope.row.is_active ? 'warning' : 'success'"
@@ -90,6 +90,13 @@
               @click="handleToggleStatus(scope.row)"
             >
               {{ scope.row.is_active ? '禁用' : '启用' }}
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleResetPassword(scope.row)"
+            >
+              重置密码
             </el-button>
             <el-button
               type="danger"
@@ -123,7 +130,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getAllUsers, updateUserStatus, deleteUser } from '@/api/admin'
+import { getAllUsers, updateUserStatus, deleteUser, resetUserPassword } from '@/api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDateTime } from '@/utils/date'
 
@@ -204,6 +211,30 @@ const handleDelete = async (userId) => {
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
+    }
+  }
+}
+
+// 重置密码
+const handleResetPassword = async (user) => {
+  try {
+    const { value: newPassword } = await ElMessageBox.prompt(
+      `请输入用户 ${user.username} 的新密码`,
+      '重置密码',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputPattern: /.{6,}/,
+        inputErrorMessage: '密码至少6位'
+      }
+    )
+
+    // 调用后端 API 重置密码
+    await resetUserPassword(user.id, newPassword)
+    ElMessage.success('密码重置成功')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('密码重置失败')
     }
   }
 }
