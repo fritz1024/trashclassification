@@ -1,0 +1,525 @@
+<template>
+  <view class="container">
+    <!-- 未登录提示 -->
+    <view v-if="!isLogin" class="empty-state">
+      <text class="empty-icon">🔒</text>
+      <text class="empty-text">请先登录使用AI助手</text>
+      <button class="login-btn" @click="goLogin">去登录</button>
+    </view>
+
+    <!-- 聊天界面 -->
+    <view v-else class="chat-container">
+      <!-- 顶部操作栏 -->
+      <view class="chat-header">
+        <button class="header-btn" @click="showHistoryDrawer = true">
+          <text class="btn-icon">📋</text>
+          <text class="btn-text">历史</text>
+        </button>
+        <button class="header-btn" @click="createNewChat">
+          <text class="btn-icon">➕</text>
+          <text class="btn-text">新对话</text>
+        </button>
+        <button class="header-btn" @click="clearChat">
+          <text class="btn-icon">🗑️</text>
+          <text class="btn-text">清空</text>
+        </button>
+      </view>
+
+      <!-- 消息列表 -->
+      <scroll-view
+        class="message-list"
+        scroll-y
+        :scroll-into-view="scrollToView"
+        scroll-with-animation
+      >
+        <!-- 欢迎消息 -->
+        <view v-if="messages.length === 0" class="welcome-section">
+          <text class="welcome-icon">🤖</text>
+          <text class="welcome-title">有什么我能帮你的吗？</text>
+          <text class="welcome-subtitle">我可以帮你解答垃圾分类相关的问题</text>
+        </view>
+
+        <!-- 消息列表 -->
+        <view
+          v-for="(msg, index) in messages"
+          :key="index"
+          :id="'msg-' + index"
+          class="message-item"
+          :class="msg.role"
+        >
+          <view class="message-avatar">
+            <text class="avatar-text">{{ msg.role === 'user' ? '我' : 'AI' }}</text>
+          </view>
+          <view class="message-bubble">
+            <text class="message-text">{{ msg.content }}</text>
+          </view>
+        </view>
+
+        <!-- 加载中 -->
+        <view v-if="loading" class="message-item assistant">
+          <view class="message-avatar">
+            <text class="avatar-text">AI</text>
+          </view>
+          <view class="message-bubble">
+            <text class="loading-text">思考中...</text>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- 输入框 -->
+      <view class="input-area">
+        <input
+          class="input"
+          v-model="inputText"
+          placeholder="输入您的问题..."
+          placeholder-class="placeholder"
+          @confirm="sendMessage"
+        />
+        <button
+          class="send-btn"
+          @click="sendMessage"
+          :disabled="loading || !inputText.trim()"
+        >
+          发送
+        </button>
+      </view>
+
+      <!-- 历史对话抽屉 -->
+      <view v-if="showHistoryDrawer" class="history-drawer-mask" @click="showHistoryDrawer = false">
+        <view class="history-drawer" @click.stop>
+          <view class="drawer-header">
+            <text class="drawer-title">历史对话</text>
+            <text class="drawer-close" @click="showHistoryDrawer = false">✕</text>
+          </view>
+          <scroll-view class="history-list" scroll-y>
+            <view
+              v-for="conv in conversations"
+              :key="conv.id"
+              class="history-item"
+              :class="{ active: currentConversationId === conv.id }"
+              @click="switchConversation(conv.id)"
+            >
+              <view class="history-info">
+                <text class="history-title">{{ conv.title }}</text>
+                <text class="history-time">{{ formatTime(conv.updated_at) }}</text>
+              </view>
+              <text class="delete-icon" @click.stop="deleteConversation(conv.id)">🗑️</text>
+            </view>
+            <view v-if="conversations.length === 0" class="empty-history">
+              <text class="empty-text">暂无历史对话</text>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script>
+import { sendMessage as sendChatMessage, getConversations, createConversation, deleteConversation as deleteConv } from '../../api/chat.js'
+
+export default {
+  data() {
+    return {
+      isLogin: false,
+      messages: [],
+      inputText: '',
+      loading: false,
+      scrollToView: '',
+      showHistoryDrawer: false,
+      conversations: [],
+      currentConversationId: null
+    }
+  },
+
+  onLoad() {
+    this.checkLogin()
+    if (this.isLogin) {
+      this.loadConversations()
+    }
+  },
+
+  onShow() {
+    // 每次页面显示时重新检查登录状态
+    this.checkLogin()
+    if (this.isLogin) {
+      this.loadConversations()
+    }
+  },
+
+  methods: {
+    checkLogin() {
+      const token = uni.getStorageSync('token')
+      this.isLogin = !!token
+    },
+
+    goLogin() {
+      uni.navigateTo({
+        url: '/pages/login/login'
+      })
+    },
+
+    async loadConversations() {
+      try {
+        const res = await getConversations()
+        this.conversations = res || []
+      } catch (error) {
+        console.error('加载对话列表失败:', error)
+      }
+    },
+
+    async createNewChat() {
+      try {
+        const title = '新对话 ' + new Date().toLocaleTimeString()
+        const res = await createConversation(title)
+        this.currentConversationId = res.id
+        this.messages = []
+        this.loadConversations()
+        uni.showToast({
+          title: '已创建新对话',
+          icon: 'success'
+        })
+      } catch (error) {
+        console.error('创建对话失败:', error)
+        uni.showToast({
+          title: '创建失败',
+          icon: 'none'
+        })
+      }
+    },
+
+    clearChat() {
+      uni.showModal({
+        title: '提示',
+        content: '确定要清空当前对话吗？',
+        success: (res) => {
+          if (res.confirm) {
+            this.messages = []
+            uni.showToast({
+              title: '已清空',
+              icon: 'success'
+            })
+          }
+        }
+      })
+    },
+
+    async sendMessage() {
+      const text = this.inputText.trim()
+      if (!text || this.loading) return
+
+      // 添加用户消息
+      this.messages.push({
+        role: 'user',
+        content: text
+      })
+      this.inputText = ''
+      this.scrollToBottom()
+
+      this.loading = true
+      try {
+        // 发送完整的对话历史
+        const res = await sendChatMessage({
+          messages: this.messages
+        })
+
+        // 添加AI回复
+        if (res && res.reply) {
+          this.messages.push({
+            role: 'assistant',
+            content: res.reply
+          })
+          this.scrollToBottom()
+        } else {
+          throw new Error('无效的响应格式')
+        }
+      } catch (error) {
+        console.error('聊天错误:', error)
+
+        // 移除刚才添加的用户消息（因为发送失败）
+        this.messages.pop()
+
+        // 显示错误提示
+        const errorMsg = error.detail ?
+          (Array.isArray(error.detail) ? error.detail[0].msg : error.detail) :
+          '发送失败，请重试'
+
+        uni.showToast({
+          title: errorMsg,
+          icon: 'none'
+        })
+      } finally {
+        this.loading = false
+      }
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        this.scrollToView = 'msg-' + (this.messages.length - 1)
+      })
+    }
+  }
+}
+</script>
+
+<style scoped>
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+  margin-bottom: 30rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 40rpx;
+}
+
+.login-btn {
+  width: 300rpx;
+  height: 80rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  background: #fff;
+  padding: 20rpx;
+  border-bottom: 1rpx solid #e5e5e5;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header-btn {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 20rpx;
+  background: #f5f5f5;
+  border-radius: 20rpx;
+  border: none;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.btn-icon {
+  font-size: 28rpx;
+}
+
+.btn-text {
+  font-size: 24rpx;
+}
+
+.welcome-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 40rpx;
+  text-align: center;
+}
+
+.welcome-icon {
+  font-size: 100rpx;
+  margin-bottom: 30rpx;
+}
+
+.welcome-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.welcome-subtitle {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.message-list {
+  flex: 1;
+  padding: 20rpx;
+  overflow-y: auto;
+}
+
+.message-item {
+  display: flex;
+  margin-bottom: 20rpx;
+  align-items: flex-start;
+}
+
+.message-item.user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.message-item.user .message-avatar {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  margin-left: 15rpx;
+}
+
+.message-item.assistant .message-avatar {
+  margin-right: 15rpx;
+}
+
+.avatar-text {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 20rpx 30rpx;
+  border-radius: 16rpx;
+  word-wrap: break-word;
+}
+
+.message-item.user .message-bubble {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.message-item.assistant .message-bubble {
+  background: #fff;
+}
+
+.message-text {
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.message-item.user .message-text {
+  color: #fff;
+}
+
+.message-item.assistant .message-text {
+  color: #333;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.input-area {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #fff;
+  border-top: 1rpx solid #eee;
+}
+
+.input {
+  flex: 1;
+  height: 70rpx;
+  background: #f5f5f5;
+  border-radius: 35rpx;
+  padding: 0 30rpx;
+  font-size: 28rpx;
+  margin-right: 20rpx;
+}
+
+.placeholder {
+  color: #ccc;
+}
+
+.send-btn {
+  width: 120rpx;
+  height: 70rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 35rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.send-btn[disabled] {
+  opacity: 0.5;
+}
+</style>
+
+    async switchConversation(id) {
+      try {
+        const conv = this.conversations.find(c => c.id === id)
+        if (conv) {
+          this.currentConversationId = id
+          this.messages = conv.messages || []
+          this.showHistoryDrawer = false
+        }
+      } catch (error) {
+        console.error('切换对话失败:', error)
+      }
+    },
+
+    async deleteConversation(id) {
+      uni.showModal({
+        title: '提示',
+        content: '确定要删除这个对话吗？',
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              await deleteConv(id)
+              if (this.currentConversationId === id) {
+                this.currentConversationId = null
+                this.messages = []
+              }
+              this.loadConversations()
+              uni.showToast({
+                title: '已删除',
+                icon: 'success'
+              })
+            } catch (error) {
+              console.error('删除对话失败:', error)
+            }
+          }
+        }
+      })
+    },
+
+    formatTime(time) {
+      const date = new Date(time)
+      const now = new Date()
+      const diff = now - date
+      
+      if (diff < 60000) return '刚刚'
+      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+      
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${month}-${day}`
+    },

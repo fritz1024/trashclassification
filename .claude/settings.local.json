@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python migrate_knowledge.py:*)",
+      "Bash(ls:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(mkdir:*)"
+    ]
+  }
+}

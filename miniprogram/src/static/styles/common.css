@@ -1,0 +1,103 @@
+/* 全局通用样式 */
+
+/* 清除默认样式 */
+page {
+  height: 100%;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #333;
+  box-sizing: border-box;
+}
+
+view, text, button, input, image {
+  box-sizing: border-box;
+}
+
+/* 通用布局 */
+.container {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 通用按钮样式 */
+button {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  line-height: normal;
+}
+
+button::after {
+  border: none;
+}
+
+/* 通用输入框样式 */
+input {
+  outline: none;
+}
+
+/* 通用图片样式 */
+image {
+  display: block;
+}
+
+/* 通用文本样式 */
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* 通用间距 */
+.mt-10 {
+  margin-top: 10rpx;
+}
+
+.mt-20 {
+  margin-top: 20rpx;
+}
+
+.mt-30 {
+  margin-top: 30rpx;
+}
+
+.mb-10 {
+  margin-bottom: 10rpx;
+}
+
+.mb-20 {
+  margin-bottom: 20rpx;
+}
+
+.mb-30 {
+  margin-bottom: 30rpx;
+}
+
+/* 通用 flex 布局 */
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}

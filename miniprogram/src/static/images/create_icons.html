@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Create Icons</title>
+</head>
+<body>
+    <canvas id="canvas" width="81" height="81"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 创建一个简单的图标
+        function createIcon(color, text) {
+            ctx.clearRect(0, 0, 81, 81);
+            ctx.fillStyle = color;
+            ctx.fillRect(20, 20, 41, 41);
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 40.5, 40.5);
+            return canvas.toDataURL('image/png');
+        }
+        
+        console.log('Home:', createIcon('#999', '识'));
+        console.log('Home Active:', createIcon('#3cc51f', '识'));
+    </script>
+</body>
+</html>

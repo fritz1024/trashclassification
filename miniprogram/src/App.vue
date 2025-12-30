@@ -1,0 +1,25 @@
+<script>
+export default {
+  onLaunch: function() {
+    console.log('App Launch')
+  },
+  onShow: function() {
+    console.log('App Show')
+  },
+  onHide: function() {
+    console.log('App Hide')
+  }
+}
+</script>
+
+<style>
+/* 全局样式 */
+@import './static/styles/common.css';
+
+page {
+  background-color: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+</style>
