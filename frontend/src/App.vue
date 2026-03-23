@@ -31,26 +31,10 @@
           </el-menu>
           <div class="user-actions">
             <template v-if="!userStore.isLoggedIn">
-              <el-button @click="showLogin = true">登录</el-button>
-              <el-button type="primary" @click="showRegister = true">注册</el-button>
+              <el-button @click="$router.push('/login')">登录</el-button>
+              <el-button type="success" @click="$router.push('/login')">注册</el-button>
             </template>
             <template v-else>
-              <el-dropdown class="theme-dropdown">
-                <el-button circle>
-                  <el-icon><Brush /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item
-                      v-for="(theme, key) in themeStore.themes"
-                      :key="key"
-                      @click="themeStore.setTheme(key)"
-                    >
-                      <span :style="{ color: theme.primary }">●</span> {{ theme.name }}
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
               <el-dropdown>
                 <span class="user-info">
                   <el-icon><User /></el-icon>
@@ -81,70 +65,13 @@
       </el-footer>
     </el-container>
 
-    <!-- 登录对话框 -->
-    <el-dialog v-model="showLogin" title="用户登录" width="400px">
-      <el-form :model="loginForm" label-width="80px">
-        <el-form-item label="用户名">
-          <el-input v-model="loginForm.username" placeholder="请输入用户名" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input
-            v-model="loginForm.password"
-            :type="loginPasswordVisible ? 'text' : 'password'"
-            placeholder="请输入密码"
-          >
-            <template #suffix>
-              <el-icon @click="loginPasswordVisible = !loginPasswordVisible" style="cursor: pointer;">
-                <View v-if="!loginPasswordVisible" />
-                <Hide v-else />
-              </el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showLogin = false">取消</el-button>
-        <el-button type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 注册对话框 -->
-    <el-dialog v-model="showRegister" title="用户注册" width="400px">
-      <el-form :model="registerForm" label-width="80px">
-        <el-form-item label="用户名">
-          <el-input v-model="registerForm.username" placeholder="请输入用户名" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="registerForm.email" placeholder="请输入邮箱（可选）" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input
-            v-model="registerForm.password"
-            :type="registerPasswordVisible ? 'text' : 'password'"
-            placeholder="请输入密码"
-          >
-            <template #suffix>
-              <el-icon @click="registerPasswordVisible = !registerPasswordVisible" style="cursor: pointer;">
-                <View v-if="!registerPasswordVisible" />
-                <Hide v-else />
-              </el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showRegister = false">取消</el-button>
-        <el-button type="primary" @click="handleRegister" :loading="registerLoading">注册</el-button>
-      </template>
-    </el-dialog>
-
     <!-- AI 聊天助手悬浮窗口（在 AI 助手页面隐藏） -->
     <ChatWidget v-if="route.path !== '/ai-chat'" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { useThemeStore } from '@/store/theme'
@@ -158,9 +85,7 @@ const themeStore = useThemeStore()
 
 const activeMenu = computed(() => route.path)
 
-// 页面加载时，如果有 token，自动获取用户信息
 onMounted(async () => {
-  // 初始化主题
   themeStore.initTheme()
 
   if (userStore.token && !userStore.user) {
@@ -168,84 +93,11 @@ onMounted(async () => {
       await userStore.fetchCurrentUser()
     } catch (error) {
       console.error('获取用户信息失败:', error)
-      // 如果获取失败，清除 token
       userStore.logout()
     }
   }
 })
 
-// 登录相关
-const showLogin = ref(false)
-const loginForm = ref({
-  username: '',
-  password: ''
-})
-const loginLoading = ref(false)
-const loginPasswordVisible = ref(false)
-
-// 注册相关
-const showRegister = ref(false)
-const registerForm = ref({
-  username: '',
-  email: '',
-  password: ''
-})
-const registerLoading = ref(false)
-const registerPasswordVisible = ref(false)
-
-// 处理登录
-const handleLogin = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-
-  loginLoading.value = true
-  try {
-    await userStore.login(loginForm.value)
-    ElMessage.success('登录成功')
-    showLogin.value = false
-    loginForm.value = { username: '', password: '' }
-  } catch (error) {
-    ElMessage.error(error.message || '登录失败')
-  } finally {
-    loginLoading.value = false
-  }
-}
-
-// 处理注册
-const handleRegister = async () => {
-  if (!registerForm.value.username || !registerForm.value.password) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-
-  registerLoading.value = true
-  try {
-    // 如果邮箱为空，不发送 email 字段
-    const userData = {
-      username: registerForm.value.username,
-      password: registerForm.value.password
-    }
-
-    // 只有当邮箱不为空时才添加 email 字段
-    if (registerForm.value.email && registerForm.value.email.trim()) {
-      userData.email = registerForm.value.email
-    }
-
-    await userStore.register(userData)
-    ElMessage.success('注册成功，请登录')
-    showRegister.value = false
-    showLogin.value = true
-    registerForm.value = { username: '', email: '', password: '' }
-  } catch (error) {
-    ElMessage.error(error.message || '注册失败')
-  } finally {
-    registerLoading.value = false
-  }
-}
-
-// 处理登出
 const handleLogout = () => {
   userStore.logout()
   ElMessage.success('已退出登录')
@@ -258,6 +110,13 @@ const handleLogout = () => {
   min-height: 100vh;
   background-color: var(--theme-main-bg);
   color: var(--theme-text-color);
+  margin: 0;
+  padding: 0;
+}
+
+.el-container {
+  margin: 0;
+  padding: 0;
 }
 
 .el-header {
@@ -315,18 +174,6 @@ const handleLogout = () => {
   align-items: center;
 }
 
-.theme-dropdown :deep(.el-button) {
-  background-color: transparent;
-  border-color: var(--theme-header-text);
-  color: var(--theme-header-text);
-}
-
-.theme-dropdown :deep(.el-button:hover) {
-  background-color: var(--theme-menu-active-bg);
-  border-color: var(--theme-header-text);
-  color: var(--theme-header-text);
-}
-
 .user-info {
   display: flex;
   align-items: center;
@@ -345,7 +192,7 @@ const handleLogout = () => {
 .el-main {
   min-height: calc(100vh - 120px);
   background-color: var(--theme-main-bg);
-  padding: 20px;
+  padding: 0;
 }
 
 .el-footer {

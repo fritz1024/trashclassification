@@ -57,6 +57,7 @@
               :src="`/${scope.row.image_path}`"
               fit="cover"
               :preview-src-list="[`/${scope.row.image_path}`]"
+              preview-teleported
             />
           </template>
         </el-table-column>

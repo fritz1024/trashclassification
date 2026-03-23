@@ -1,40 +1,27 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
-// 主题配置
+// 绿色主题配置
 export const themes = {
-  light: {
-    name: '亮色模式',
-    primary: '#409eff',
-    headerBg: '#409eff',
+  green: {
+    name: '绿色主题',
+    primary: '#10b981',
+    headerBg: '#10b981',
     headerText: '#ffffff',
     menuActiveBg: 'rgba(255, 255, 255, 0.2)',
-    footerBg: '#2c3e50',
-    mainBg: '#f5f7fa',
+    footerBg: '#047857',
+    mainBg: '#f0fdf4',
     cardBg: '#ffffff',
-    textColor: '#303133'
-  },
-  dark: {
-    name: '暗黑模式',
-    primary: '#409eff',
-    headerBg: '#1f1f1f',
-    headerText: '#ffffff',
-    menuActiveBg: 'rgba(255, 255, 255, 0.1)',
-    footerBg: '#000000',
-    mainBg: '#141414',
-    cardBg: '#1f1f1f',
-    textColor: '#e5e5e5'
+    textColor: '#1f2937'
   }
 }
 
 export const useThemeStore = defineStore('theme', () => {
-  const currentTheme = ref(localStorage.getItem('theme') || 'light')
+  const currentTheme = ref('green')
 
   // 应用主题
-  const applyTheme = (themeName) => {
-    const theme = themes[themeName]
-    if (!theme) return
-
+  const applyTheme = () => {
+    const theme = themes.green
     const root = document.documentElement
     root.style.setProperty('--theme-primary', theme.primary)
     root.style.setProperty('--theme-header-bg', theme.headerBg)
@@ -46,29 +33,14 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--theme-text-color', theme.textColor)
   }
 
-  // 切换主题
-  const setTheme = (themeName) => {
-    if (themes[themeName]) {
-      currentTheme.value = themeName
-      localStorage.setItem('theme', themeName)
-      applyTheme(themeName)
-    }
-  }
-
   // 初始化主题
   const initTheme = () => {
-    applyTheme(currentTheme.value)
+    applyTheme()
   }
-
-  // 监听主题变化
-  watch(currentTheme, (newTheme) => {
-    applyTheme(newTheme)
-  })
 
   return {
     currentTheme,
     themes,
-    setTheme,
     initTheme
   }
 })

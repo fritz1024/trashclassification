@@ -45,6 +45,7 @@ class Settings(BaseSettings):
 
     # AI配置 - 通义千问
     DASHSCOPE_API_KEY: Optional[str] = None
+    ENABLE_RAG: bool = False  # 是否启用RAG知识库检索
 
     class Config:
         env_file = ".env"

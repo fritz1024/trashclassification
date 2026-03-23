@@ -189,7 +189,7 @@ export default {
 <style scoped>
 .login-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%);
   padding: 100rpx 60rpx;
 }
 
@@ -202,20 +202,21 @@ export default {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #fff;
+  color: #064e3b;
   margin-bottom: 20rpx;
 }
 
 .subtitle {
   display: block;
   font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.8);
+  color: #065f46;
 }
 
 .form-container {
   background: #fff;
   border-radius: 20rpx;
   padding: 60rpx 40rpx;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.1);
 }
 
 .tab-bar {
@@ -234,8 +235,8 @@ export default {
 }
 
 .tab-item.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: #10b981;
+  border-bottom-color: #10b981;
   font-weight: bold;
 }
 
@@ -253,7 +254,7 @@ export default {
 .input {
   width: 100%;
   height: 88rpx;
-  background: #f5f5f5;
+  background: #f0fdf4;
   border-radius: 10rpx;
   padding: 0 30rpx;
   font-size: 28rpx;
@@ -266,7 +267,7 @@ export default {
 .submit-btn {
   width: 100%;
   height: 88rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #10b981;
   color: #fff;
   border-radius: 44rpx;
   font-size: 32rpx;
@@ -281,6 +282,6 @@ export default {
 
 .tip-text {
   font-size: 28rpx;
-  color: #667eea;
+  color: #10b981;
 }
 </style>

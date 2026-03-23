@@ -3,9 +3,9 @@
 创建默认管理员账号和初始数据
 """
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal, engine
-from app.models.database import Base, User
-from app.core.security import get_password_hash
+from backend.app.core.database import SessionLocal, engine
+from backend.app.models.database import Base, User
+from backend.app.core.security import get_password_hash
 
 
 def init_db():

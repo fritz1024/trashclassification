@@ -44,6 +44,10 @@ class AIService:
         Returns:
             相关文档内容
         """
+        # 检查是否启用RAG
+        if not settings.ENABLE_RAG:
+            return ""
+
         try:
             if self.vector_store is None:
                 return ""

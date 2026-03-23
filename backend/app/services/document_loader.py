@@ -177,9 +177,12 @@ def prepare_knowledge_base(project_root: str) -> List[Dict]:
     # 要加载的文档列表
     doc_files = [
         os.path.join(project_root, 'README.md'),
-        # 可以添加更多文档
-        # os.path.join(project_root, 'docs', '开发方案.md'),
-        # os.path.join(project_root, 'docs', '快速启动指南.md'),
+        os.path.join(project_root, 'docs', '开发方案.md'),
+        os.path.join(project_root, 'docs', '快速启动指南.md'),
+        os.path.join(project_root, 'backend', 'docs', 'RAG使用说明.md'),
+        os.path.join(project_root, 'backend', 'scripts', 'README.md'),
+        os.path.join(project_root, 'miniprogram', 'README.md'),
+        os.path.join(project_root, 'miniprogram', 'CONFIG.md'),
     ]
 
     # 过滤存在的文件

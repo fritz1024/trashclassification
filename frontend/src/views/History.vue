@@ -70,7 +70,9 @@
             <el-image
               style="width: 100px; height: 100px"
               :src="`/${scope.row.image_path}`"
+              :preview-src-list="[`/${scope.row.image_path}`]"
               fit="cover"
+              preview-teleported
             />
           </template>
         </el-table-column>
@@ -391,8 +393,10 @@ watch(() => route.path, (newPath) => {
 
 <style scoped>
 .history {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 40px;
 }
 
 .header-wrapper {

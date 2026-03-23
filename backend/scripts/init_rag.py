@@ -21,8 +21,9 @@ def init_knowledge_base():
         logger.info("=" * 50)
 
         # 获取项目根目录
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(backend_dir)
+        script_dir = os.path.dirname(os.path.abspath(__file__))  # backend/scripts
+        backend_dir = os.path.dirname(script_dir)  # backend
+        project_root = os.path.dirname(backend_dir)  # 项目根目录
 
         logger.info(f"项目根目录: {project_root}")
 

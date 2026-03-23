@@ -111,7 +111,9 @@ watch(() => route.path, (newPath) => {
 
 <style scoped>
 .stats {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 40px;
 }
 </style>

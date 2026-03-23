@@ -10,6 +10,11 @@ const routes = [
     component: () => import('@/views/Home.vue')
   },
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue')
+  },
+  {
     path: '/classify',
     name: 'Classify',
     component: () => import('@/views/Classify.vue')
@@ -103,7 +108,7 @@ router.beforeEach((to, from, next) => {
   // 普通用户路由验证
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
-    next('/')
+    next('/login')
     return
   }
 
