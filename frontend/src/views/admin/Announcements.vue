@@ -1,66 +1,80 @@
 <template>
-  <div class="announcements-page">
-    <el-card>
-      <template #header>
-        <div class="page-header">
-          <h3>公告管理</h3>
+  <AdminLayout>
+    <div class="admin-page">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>公告管理</h1>
+        <div class="header-actions">
           <el-button type="primary" @click="showCreateDialog = true">
             <el-icon><Plus /></el-icon>
             新建公告
           </el-button>
         </div>
-      </template>
+      </div>
 
-      <!-- 公告列表 -->
-      <el-table :data="announcements" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="标题" min-width="200" />
-        <el-table-column prop="type" label="类型" width="100">
-          <template #default="scope">
-            <el-tag :type="getTypeColor(scope.row.type)">
-              {{ getTypeName(scope.row.type) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="priority" label="优先级" width="100" />
-        <el-table-column prop="is_published" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.is_published ? 'success' : 'info'">
-              {{ scope.row.is_published ? '已发布' : '未发布' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template #default="scope">
-            {{ formatDate(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="scope">
-            <el-button type="primary" size="small" @click="handleEdit(scope.row)">
-              编辑
-            </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(scope.row.id)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- Data Table -->
+        <el-table
+          :data="announcements"
+          v-loading="loading"
+          style="width: 100%"
+          stripe
+          class="admin-table"
+        >
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column prop="title" label="标题" min-width="200" />
+          <el-table-column prop="type" label="类型" width="100">
+            <template #default="scope">
+              <el-tag :type="getTypeColor(scope.row.type)" size="small">
+                {{ getTypeName(scope.row.type) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="priority" label="优先级" width="100" />
+          <el-table-column prop="is_published" label="状态" width="100">
+            <template #default="scope">
+              <el-tag :type="scope.row.is_published ? 'success' : 'info'" size="small">
+                {{ scope.row.is_published ? '已发布' : '未发布' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="创建时间" width="180">
+            <template #default="scope">
+              {{ formatDate(scope.row.created_at) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="200" fixed="right">
+            <template #default="scope">
+              <el-button type="primary" size="small" text @click="handleEdit(scope.row)">
+                编辑
+              </el-button>
+              <el-button type="danger" size="small" text @click="handleDelete(scope.row.id)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-      <!-- 分页 -->
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        @size-change="fetchAnnouncements"
-        @current-change="fetchAnnouncements"
-        style="margin-top: 20px; justify-content: center;"
-      />
-    </el-card>
+        <!-- Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            共 {{ total }} 条
+          </span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[10, 20, 50]"
+            layout="sizes, prev, pager, next"
+            @size-change="fetchAnnouncements"
+            @current-change="fetchAnnouncements"
+          />
+        </div>
+      </div>
+    </div>
 
-    <!-- 创建/编辑公告对话框 -->
+    <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
       :title="editingId ? '编辑公告' : '新建公告'"
@@ -100,13 +114,14 @@
         </el-button>
       </template>
     </el-dialog>
-  </div>
+  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AdminLayout from '@/components/AdminLayout.vue'
 
 const announcements = ref([])
 const loading = ref(false)
@@ -264,19 +279,53 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.announcements-page {
-  padding: 20px;
+.admin-page {
+  padding: 0;
 }
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
 }
 
-.page-header h3 {
+.page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.content-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-table {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
 }
 </style>

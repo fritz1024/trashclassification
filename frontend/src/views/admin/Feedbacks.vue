@@ -1,16 +1,10 @@
 <template>
-  <div class="admin-page">
-    <el-card>
-      <!-- 页面标题 -->
-      <template #header>
-        <div class="page-header">
-          <h3>用户反馈管理</h3>
-        </div>
-      </template>
-
-      <!-- 操作栏 -->
-      <div class="toolbar">
-        <div class="toolbar-left">
+  <AdminLayout>
+    <div class="admin-page">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>反馈管理</h1>
+        <div class="header-actions">
           <el-button
             type="success"
             :disabled="selectedIds.length === 0"
@@ -19,83 +13,94 @@
             批量标记已处理 ({{ selectedIds.length }})
           </el-button>
         </div>
-        <div class="toolbar-right">
-          <el-radio-group v-model="statusFilter" @change="handleFilterChange">
-            <el-radio-button label="">全部</el-radio-button>
-            <el-radio-button label="pending">待处理</el-radio-button>
-            <el-radio-button label="processed">已处理</el-radio-button>
-          </el-radio-group>
+      </div>
+
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left"></div>
+          <div class="toolbar-right">
+            <el-radio-group v-model="statusFilter" @change="handleFilterChange">
+              <el-radio-button label="">全部</el-radio-button>
+              <el-radio-button label="pending">待处理</el-radio-button>
+              <el-radio-button label="processed">已处理</el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <el-table
+          :data="feedbackList"
+          style="width: 100%"
+          v-loading="loading"
+          stripe
+          @selection-change="handleSelectionChange"
+          class="admin-table"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column label="#" width="70">
+            <template #default="scope">
+              {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="username" label="用户" width="120" />
+          <el-table-column label="记录ID" width="120">
+            <template #default="scope">
+              <el-link type="primary" @click="handleShowPredictionDetail(scope.row)">
+                {{ scope.row.prediction_id }}
+              </el-link>
+            </template>
+          </el-table-column>
+          <el-table-column prop="correct_class" label="正确分类" min-width="150" />
+          <el-table-column prop="comment" label="备注" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="scope">
+              <el-tag :type="scope.row.status === 'pending' ? 'warning' : 'success'" size="small">
+                {{ scope.row.status === 'pending' ? '待处理' : '已处理' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="180">
+            <template #default="scope">
+              {{ formatDateTime(scope.row.created_at) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="scope">
+              <el-button
+                v-if="scope.row.status === 'pending'"
+                type="success"
+                size="small"
+                link
+                @click="handleProcess(scope.row.id)"
+              >
+                标记已处理
+              </el-button>
+              <el-tag v-else type="success" size="small">已处理</el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
+          </span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="sizes, prev, pager, next"
+            @size-change="fetchFeedbacks"
+            @current-change="fetchFeedbacks"
+          />
         </div>
       </div>
+    </div>
 
-      <!-- 数据表格 -->
-      <el-table
-        :data="feedbackList"
-        style="width: 100%"
-        v-loading="loading"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column label="序号" width="80">
-          <template #default="scope">
-            {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="username" label="用户" width="120" />
-        <el-table-column label="识别记录ID" width="120">
-          <template #default="scope">
-            <el-link type="primary" @click="handleShowPredictionDetail(scope.row)">
-              {{ scope.row.prediction_id }}
-            </el-link>
-          </template>
-        </el-table-column>
-        <el-table-column prop="correct_class" label="正确分类" min-width="150" />
-        <el-table-column prop="comment" label="备注" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.status === 'pending' ? 'warning' : 'success'">
-              {{ scope.row.status === 'pending' ? '待处理' : '已处理' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="提交时间" width="180">
-          <template #default="scope">
-            {{ formatDateTime(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="scope">
-            <el-button
-              v-if="scope.row.status === 'pending'"
-              type="success"
-              size="small"
-              @click="handleProcess(scope.row.id)"
-            >
-              标记已处理
-            </el-button>
-            <el-tag v-else type="success">已处理</el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <span class="pagination-info">
-          第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
-        </span>
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          layout="sizes, prev, pager, next"
-          @size-change="fetchFeedbacks"
-          @current-change="fetchFeedbacks"
-        />
-      </div>
-    </el-card>
-
-    <!-- 识别记录详情对话框 -->
+    <!-- Prediction Detail Dialog -->
     <el-dialog
       v-model="showDetailDialog"
       title="识别记录详情"
@@ -117,7 +122,7 @@
           </el-descriptions-item>
           <el-descriptions-item label="识别图片">
             <el-image
-              style="width: 200px; height: 200px"
+              style="width: 200px; height: 200px; border-radius: var(--radius-sm);"
               :src="`/${currentPredictionDetail.image_path}`"
               fit="cover"
               :preview-src-list="[`/${currentPredictionDetail.image_path}`]"
@@ -125,11 +130,11 @@
           </el-descriptions-item>
         </el-descriptions>
       </div>
-      <div v-else style="text-align: center; padding: 20px; color: #999;">
+      <div v-else class="detail-empty">
         识别记录不存在或已被删除
       </div>
     </el-dialog>
-  </div>
+  </AdminLayout>
 </template>
 
 <script setup>
@@ -137,6 +142,7 @@ import { ref, onMounted } from 'vue'
 import { getAllFeedbacks, updateFeedbackStatus } from '@/api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDateTime } from '@/utils/date'
+import AdminLayout from '@/components/AdminLayout.vue'
 
 const feedbackList = ref([])
 const loading = ref(false)
@@ -229,52 +235,75 @@ onMounted(() => {
 
 <style scoped>
 .admin-page {
-  /* 统一的管理页面样式 */
+  padding: 0;
 }
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
 }
 
-.page-header h3 {
+.page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.content-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
-  background-color: var(--theme-card-bg);
-  border-radius: 4px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
 }
 
-.toolbar-left {
-  display: flex;
-  gap: 10px;
-}
-
+.toolbar-left,
 .toolbar-right {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
 }
 
-.pagination {
-  margin-top: 20px;
+.admin-table {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.pagination-bar {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .pagination-info {
-  font-size: 14px;
-  color: #606266;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.detail-empty {
+  text-align: center;
+  padding: var(--space-6);
+  color: var(--text-tertiary);
 }
 </style>

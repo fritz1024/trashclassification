@@ -1,16 +1,10 @@
 <template>
-  <div class="admin-page">
-    <el-card>
-      <!-- 页面标题 -->
-      <template #header>
-        <div class="page-header">
-          <h3>用户管理</h3>
-        </div>
-      </template>
-
-      <!-- 操作栏 -->
-      <div class="toolbar">
-        <div class="toolbar-left">
+  <AdminLayout>
+    <div class="admin-page">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>用户管理</h1>
+        <div class="header-actions">
           <el-button
             type="warning"
             :disabled="selectedIds.length === 0"
@@ -33,99 +27,112 @@
             批量删除 ({{ selectedIds.length }})
           </el-button>
         </div>
-        <div class="toolbar-right">
-          <el-select v-model="roleFilter" placeholder="角色筛选" clearable style="width: 120px; margin-right: 10px;" @change="handleFilterChange">
-            <el-option label="全部" value="" />
-            <el-option label="管理员" value="admin" />
-            <el-option label="普通用户" value="user" />
-          </el-select>
-          <el-select v-model="statusFilter" placeholder="状态筛选" clearable style="width: 120px;" @change="handleFilterChange">
-            <el-option label="全部" value="" />
-            <el-option label="正常" :value="true" />
-            <el-option label="禁用" :value="false" />
-          </el-select>
+      </div>
+
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left"></div>
+          <div class="toolbar-right">
+            <el-select v-model="roleFilter" placeholder="角色筛选" clearable style="width: 130px;" @change="handleFilterChange">
+              <el-option label="全部" value="" />
+              <el-option label="管理员" value="admin" />
+              <el-option label="普通用户" value="user" />
+            </el-select>
+            <el-select v-model="statusFilter" placeholder="状态筛选" clearable style="width: 130px;" @change="handleFilterChange">
+              <el-option label="全部" value="" />
+              <el-option label="正常" :value="true" />
+              <el-option label="禁用" :value="false" />
+            </el-select>
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <el-table
+          :data="userList"
+          style="width: 100%"
+          v-loading="loading"
+          stripe
+          @selection-change="handleSelectionChange"
+          class="admin-table"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column label="#" width="70">
+            <template #default="scope">
+              {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="username" label="用户名" min-width="120" />
+          <el-table-column prop="email" label="邮箱" min-width="180" />
+          <el-table-column prop="role" label="角色" width="100">
+            <template #default="scope">
+              <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'success'" size="small">
+                {{ scope.row.role === 'admin' ? '管理员' : '普通用户' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="is_active" label="状态" width="100">
+            <template #default="scope">
+              <el-tag :type="scope.row.is_active ? 'success' : 'danger'" size="small">
+                {{ scope.row.is_active ? '正常' : '禁用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="prediction_count" label="识别次数" width="100" />
+          <el-table-column label="注册时间" width="180">
+            <template #default="scope">
+              {{ formatDateTime(scope.row.created_at) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="250" fixed="right">
+            <template #default="scope">
+              <el-button
+                :type="scope.row.is_active ? 'warning' : 'success'"
+                size="small"
+                text
+                @click="handleToggleStatus(scope.row)"
+              >
+                {{ scope.row.is_active ? '禁用' : '启用' }}
+              </el-button>
+              <el-button
+                type="primary"
+                size="small"
+                text
+                @click="handleResetPassword(scope.row)"
+              >
+                重置密码
+              </el-button>
+              <el-button
+                type="danger"
+                size="small"
+                text
+                @click="handleDelete(scope.row.id)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
+          </span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="sizes, prev, pager, next"
+            @size-change="fetchUsers"
+            @current-change="fetchUsers"
+          />
         </div>
       </div>
-
-      <!-- 数据表格 -->
-      <el-table
-        :data="userList"
-        style="width: 100%"
-        v-loading="loading"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column label="序号" width="80">
-          <template #default="scope">
-            {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="username" label="用户名" min-width="120" />
-        <el-table-column prop="email" label="邮箱" min-width="180" />
-        <el-table-column prop="role" label="角色" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'success'">
-              {{ scope.row.role === 'admin' ? '管理员' : '普通用户' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="is_active" label="状态" width="100">
-          <template #default="scope">
-            <el-tag :type="scope.row.is_active ? 'success' : 'danger'">
-              {{ scope.row.is_active ? '正常' : '禁用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="prediction_count" label="识别次数" width="100" />
-        <el-table-column label="注册时间" width="180">
-          <template #default="scope">
-            {{ formatDateTime(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
-          <template #default="scope">
-            <el-button
-              :type="scope.row.is_active ? 'warning' : 'success'"
-              size="small"
-              @click="handleToggleStatus(scope.row)"
-            >
-              {{ scope.row.is_active ? '禁用' : '启用' }}
-            </el-button>
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleResetPassword(scope.row)"
-            >
-              重置密码
-            </el-button>
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDelete(scope.row.id)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <span class="pagination-info">
-          第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
-        </span>
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          layout="sizes, prev, pager, next"
-          @size-change="fetchUsers"
-          @current-change="fetchUsers"
-        />
-      </div>
-    </el-card>
-  </div>
+    </div>
+  </AdminLayout>
 </template>
 
 <script setup>
@@ -133,6 +140,7 @@ import { ref, onMounted } from 'vue'
 import { getAllUsers, updateUserStatus, deleteUser, resetUserPassword } from '@/api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDateTime } from '@/utils/date'
+import AdminLayout from '@/components/AdminLayout.vue'
 
 const userList = ref([])
 const loading = ref(false)
@@ -321,52 +329,69 @@ onMounted(() => {
 
 <style scoped>
 .admin-page {
-  /* 统一的管理页面样式 */
+  padding: 0;
 }
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
 }
 
-.page-header h3 {
+.page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.content-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
-  background-color: var(--theme-card-bg);
-  border-radius: 4px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
 }
 
-.toolbar-left {
-  display: flex;
-  gap: 10px;
-}
-
+.toolbar-left,
 .toolbar-right {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
 }
 
-.pagination {
-  margin-top: 20px;
+.admin-table {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.pagination-bar {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .pagination-info {
-  font-size: 14px;
-  color: #606266;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
 }
 </style>

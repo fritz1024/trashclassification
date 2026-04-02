@@ -1,178 +1,138 @@
 <template>
-  <div class="dashboard">
-    <el-collapse v-model="activeNames" class="dashboard-collapse">
-      <!-- 数据概览 -->
-      <el-collapse-item title="数据概览" name="overview">
-        <el-row :gutter="20">
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <el-statistic title="总用户数" :value="stats.total_users">
-            <template #prefix>
-              <el-icon class="stat-icon" color="#409eff"><User /></el-icon>
-            </template>
-          </el-statistic>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <el-statistic title="总识别次数" :value="stats.total_predictions">
-            <template #prefix>
-              <el-icon class="stat-icon" color="#67c23a"><Picture /></el-icon>
-            </template>
-          </el-statistic>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <el-statistic title="活跃用户" :value="stats.active_users">
-            <template #prefix>
-              <el-icon class="stat-icon" color="#e6a23c"><UserFilled /></el-icon>
-            </template>
-          </el-statistic>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <el-statistic title="今日识别" :value="todayCount">
-            <template #prefix>
-              <el-icon class="stat-icon" color="#f56c6c"><TrendCharts /></el-icon>
-            </template>
-          </el-statistic>
-        </el-card>
-      </el-col>
-    </el-row>
-      </el-collapse-item>
+  <AdminLayout>
+    <div class="dashboard-page">
+      <h1 class="page-title">数据概览</h1>
 
-      <!-- 识别数据分析 -->
-      <el-collapse-item title="识别数据分析" name="prediction">
-        <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span>分类统计 Top 10</span>
-            </div>
-          </template>
-          <div ref="categoryChart" style="width: 100%; height: 350px;"></div>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span>最近30天识别趋势</span>
-            </div>
-          </template>
-          <div ref="trendChart" style="width: 100%; height: 350px;"></div>
-        </el-card>
-      </el-col>
-    </el-row>
-      </el-collapse-item>
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #818cf8)">
+            <el-icon :size="24" color="#fff"><User /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.total_users }}</span>
+            <span class="stat-label">总用户数</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #34d399)">
+            <el-icon :size="24" color="#fff"><Picture /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.total_predictions }}</span>
+            <span class="stat-label">总识别次数</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24)">
+            <el-icon :size="24" color="#fff"><UserFilled /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ stats.active_users }}</span>
+            <span class="stat-label">活跃用户</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #ef4444, #f87171)">
+            <el-icon :size="24" color="#fff"><TrendCharts /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ todayCount }}</span>
+            <span class="stat-label">今日识别</span>
+          </div>
+        </div>
+      </div>
 
-      <!-- 用户活跃度分析 -->
-      <el-collapse-item title="用户活跃度分析" name="activity">
-        <el-row :gutter="20">
-      <el-col :span="12">
-        <el-card class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span>用户活跃度趋势（最近30天）</span>
-            </div>
-          </template>
-          <div ref="activeUsersChart" style="width: 100%; height: 350px;"></div>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card class="chart-card">
-          <template #header>
-            <div class="card-header">
-              <span>活跃用户排行榜 Top 10</span>
-            </div>
-          </template>
-          <div ref="topUsersChart" style="width: 100%; height: 350px;"></div>
-        </el-card>
-      </el-col>
-    </el-row>
-      </el-collapse-item>
+      <!-- Charts: Prediction Analysis -->
+      <h2 class="section-title">识别数据分析</h2>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>分类统计 Top 10</h3>
+          <div ref="categoryChart" class="chart-area"></div>
+        </div>
+        <div class="chart-card">
+          <h3>最近30天识别趋势</h3>
+          <div ref="trendChart" class="chart-area"></div>
+        </div>
+      </div>
 
-      <!-- 数据报表 -->
-      <el-collapse-item title="数据报表" name="report">
-        <el-row :gutter="20">
-      <el-col :span="24">
-        <el-card>
-          <template #header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <h3 style="margin: 0;">数据报表</h3>
-              <el-button
-                v-if="reportData"
-                type="success"
-                @click="exportToExcel"
-              >
-                导出 Excel
-              </el-button>
-            </div>
-          </template>
+      <!-- Charts: User Activity -->
+      <h2 class="section-title">用户活跃度分析</h2>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>用户活跃度趋势（最近30天）</h3>
+          <div ref="activeUsersChart" class="chart-area"></div>
+        </div>
+        <div class="chart-card">
+          <h3>活跃用户排行榜 Top 10</h3>
+          <div ref="topUsersChart" class="chart-area"></div>
+        </div>
+      </div>
 
-          <!-- 报表类型选择 -->
+      <!-- Report Section -->
+      <h2 class="section-title">数据报表</h2>
+      <div class="content-card">
+        <div class="report-header">
           <el-tabs v-model="activeReportTab" @tab-change="handleReportTabChange">
             <el-tab-pane label="周报" name="weekly" />
             <el-tab-pane label="月报" name="monthly" />
             <el-tab-pane label="自定义报表" name="custom" />
           </el-tabs>
+          <el-button
+            v-if="reportData"
+            type="success"
+            @click="exportToExcel"
+          >
+            导出 Excel
+          </el-button>
+        </div>
 
-          <!-- 自定义时间段选择 -->
-          <div v-if="activeReportTab === 'custom'" style="margin: 20px 0;">
-            <el-date-picker
-              v-model="dateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              format="YYYY-MM-DD"
-              value-format="YYYY-MM-DD"
-            />
-            <el-button
-              type="primary"
-              @click="fetchCustomReport"
-              :loading="reportLoading"
-              style="margin-left: 10px;"
-            >
-              生成报表
-            </el-button>
-          </div>
+        <!-- Custom date range -->
+        <div v-if="activeReportTab === 'custom'" class="custom-range">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+          />
+          <el-button
+            type="primary"
+            @click="fetchCustomReport"
+            :loading="reportLoading"
+          >
+            生成报表
+          </el-button>
+        </div>
 
-          <!-- 报表图表 -->
-          <div v-if="reportData" v-loading="reportLoading">
-            <el-row :gutter="20" style="margin-top: 20px;">
-              <el-col :span="12">
-                <el-card>
-                  <template #header>识别趋势</template>
-                  <div ref="reportTrendChart" style="width: 100%; height: 300px;"></div>
-                </el-card>
-              </el-col>
-              <el-col :span="12">
-                <el-card>
-                  <template #header>分类统计</template>
-                  <div ref="reportCategoryChart" style="width: 100%; height: 300px;"></div>
-                </el-card>
-              </el-col>
-            </el-row>
+        <!-- Report charts -->
+        <div v-if="reportData" v-loading="reportLoading" class="report-charts">
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>识别趋势</h3>
+              <div ref="reportTrendChart" class="chart-area"></div>
+            </div>
+            <div class="chart-card">
+              <h3>分类统计</h3>
+              <div ref="reportCategoryChart" class="chart-area"></div>
+            </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
-      </el-collapse-item>
-    </el-collapse>
-  </div>
+        </div>
+      </div>
+    </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import axios from 'axios'
 import * as echarts from 'echarts'
 import * as XLSX from 'xlsx'
 import { ElMessage } from 'element-plus'
 import { User, Picture, UserFilled, TrendCharts } from '@element-plus/icons-vue'
+import AdminLayout from '@/components/AdminLayout.vue'
 
 // 控制折叠面板展开状态（默认展开数据概览和识别数据分析）
 const activeNames = ref(['overview', 'prediction'])
@@ -202,6 +162,9 @@ const reportData = ref(null)
 const reportLoading = ref(false)
 const reportTrendChart = ref(null)
 const reportCategoryChart = ref(null)
+
+// Track chart instances for cleanup
+const chartInstances = []
 
 const todayCount = computed(() => {
   const today = new Date().toISOString().split('T')[0]
@@ -240,6 +203,7 @@ const fetchActivityStats = async () => {
 const initCharts = () => {
   if (categoryChart.value) {
     const chart1 = echarts.init(categoryChart.value)
+    chartInstances.push(chart1)
     chart1.setOption({
       tooltip: { trigger: 'axis' },
       xAxis: {
@@ -257,6 +221,7 @@ const initCharts = () => {
 
   if (trendChart.value) {
     const chart2 = echarts.init(trendChart.value)
+    chartInstances.push(chart2)
     chart2.setOption({
       tooltip: { trigger: 'axis' },
       xAxis: {
@@ -278,6 +243,7 @@ const initActivityCharts = () => {
   // 用户活跃度趋势图
   if (activeUsersChart.value) {
     const chart3 = echarts.init(activeUsersChart.value)
+    chartInstances.push(chart3)
     chart3.setOption({
       tooltip: { trigger: 'axis' },
       xAxis: {
@@ -301,6 +267,7 @@ const initActivityCharts = () => {
   // 活跃用户排行榜
   if (topUsersChart.value) {
     const chart4 = echarts.init(topUsersChart.value)
+    chartInstances.push(chart4)
     chart4.setOption({
       tooltip: { trigger: 'axis' },
       xAxis: {
@@ -415,6 +382,7 @@ const initReportCharts = () => {
   // 识别趋势图
   if (reportTrendChart.value && reportData.value) {
     const chart1 = echarts.init(reportTrendChart.value)
+    chartInstances.push(chart1)
     chart1.setOption({
       tooltip: { trigger: 'axis' },
       xAxis: {
@@ -435,6 +403,7 @@ const initReportCharts = () => {
   // 分类统计图
   if (reportCategoryChart.value && reportData.value) {
     const chart2 = echarts.init(reportCategoryChart.value)
+    chartInstances.push(chart2)
     chart2.setOption({
       tooltip: { trigger: 'item' },
       legend: {
@@ -460,117 +429,181 @@ const initReportCharts = () => {
   }
 }
 
+// Resize handler
+const handleResize = () => {
+  chartInstances.forEach(chart => {
+    if (chart && !chart.isDisposed()) {
+      chart.resize()
+    }
+  })
+}
+
 onMounted(() => {
   fetchStats()
   fetchActivityStats()
   fetchReport('weekly')  // 默认加载周报
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  chartInstances.forEach(chart => {
+    if (chart && !chart.isDisposed()) {
+      chart.dispose()
+    }
+  })
+  chartInstances.length = 0
 })
 </script>
 
 <style scoped>
-.dashboard {
-  padding: 20px;
+.dashboard-page {
+  padding: var(--space-2) 0;
 }
 
-/* 折叠面板样式 */
-.dashboard-collapse {
-  border: none;
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-6) 0;
 }
 
-.dashboard-collapse :deep(.el-collapse-item) {
-  margin-bottom: 20px;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #fff;
+.section-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: var(--space-8) 0 var(--space-5) 0;
 }
 
-.dashboard-collapse :deep(.el-collapse-item__header) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  background: #f5f7fa;
-  padding: 16px 20px;
-  border-bottom: 1px solid #ebeef5;
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
 }
 
-.dashboard-collapse :deep(.el-collapse-item__wrap) {
-  border: none;
-  background: #fff;
-}
-
-.dashboard-collapse :deep(.el-collapse-item__content) {
-  padding: 20px;
-}
-
-/* 统计卡片 */
 .stat-card {
-  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .stat-icon {
-  font-size: 24px;
-}
-
-/* 图表卡片 */
-.chart-card {
-  margin-bottom: 20px;
-}
-
-.card-header {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-/* 迷你统计卡片 */
-.mini-stat {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  transition: all 0.3s;
-}
-
-.mini-stat:hover {
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-}
-
-.mini-stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  flex-shrink: 0;
 }
 
-.mini-stat-content {
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.stat-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+
+.chart-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5) var(--space-6);
+}
+
+.chart-card h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.chart-area {
+  width: 100%;
+  height: 350px;
+}
+
+/* Content Card */
+.content-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+
+/* Report */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.report-header :deep(.el-tabs) {
   flex: 1;
 }
 
-.mini-stat-title {
-  font-size: 13px;
-  color: #909399;
-  margin-bottom: 4px;
+.report-header :deep(.el-tabs__header) {
+  margin-bottom: 0;
 }
 
-.mini-stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
+.custom-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
 }
 
-.mini-stat-desc {
-  font-size: 12px;
-  color: #c0c4cc;
-  margin-top: 2px;
+.report-charts {
+  margin-top: var(--space-5);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

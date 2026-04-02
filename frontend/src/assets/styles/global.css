@@ -1,0 +1,361 @@
+/* ============================================
+   Global Styles - 垃圾分类识别系统
+   ============================================ */
+
+/* === Reset & Base === */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  line-height: var(--leading-normal);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+a {
+  color: var(--text-link);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+}
+
+/* === Page Transitions === */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* === Element Plus Component Overrides === */
+
+/* Buttons */
+.el-button {
+  border-radius: var(--radius-sm) !important;
+  font-weight: var(--font-medium);
+  transition: all var(--transition-normal) !important;
+  letter-spacing: 0.01em;
+}
+
+.el-button--primary {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.el-button--primary:hover {
+  background: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-primary);
+}
+
+.el-button--primary:active {
+  transform: translateY(0);
+}
+
+/* Text & Link buttons - ensure visible colors */
+.el-button.is-text.el-button--primary,
+.el-button.is-link.el-button--primary {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--color-primary) !important;
+}
+
+.el-button.is-text.el-button--primary:hover,
+.el-button.is-link.el-button--primary:hover {
+  background: var(--bg-hover) !important;
+  color: var(--color-primary-dark) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.el-button.is-text.el-button--danger,
+.el-button.is-link.el-button--danger {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--color-danger) !important;
+}
+
+.el-button.is-text.el-button--warning,
+.el-button.is-link.el-button--warning {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--color-warning) !important;
+}
+
+.el-button.is-text.el-button--success,
+.el-button.is-link.el-button--success {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--color-success) !important;
+}
+
+.el-button--default {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-button--default:hover {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: var(--bg-hover) !important;
+}
+
+/* Cards */
+.el-card {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border-secondary) !important;
+  box-shadow: var(--shadow-sm) !important;
+  background: var(--bg-elevated) !important;
+  transition: all var(--transition-normal) !important;
+  overflow: hidden;
+}
+
+.el-card:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Input */
+.el-input__wrapper {
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 0 0 0 1px var(--border-primary) inset !important;
+  background: var(--bg-primary) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--border-hover) inset !important;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 2px var(--color-primary) inset !important;
+}
+
+/* Select */
+.el-select .el-input__wrapper {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Table */
+.el-table {
+  --el-table-border-color: var(--border-secondary);
+  --el-table-header-bg-color: var(--bg-tertiary);
+  --el-table-row-hover-bg-color: var(--bg-hover);
+  --el-table-bg-color: var(--bg-elevated);
+  --el-table-tr-bg-color: var(--bg-elevated);
+  --el-table-header-text-color: var(--text-secondary);
+  --el-table-text-color: var(--text-primary);
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+}
+
+.el-table th.el-table__cell {
+  font-weight: var(--font-semibold) !important;
+  font-size: var(--text-sm) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Dialog */
+.el-dialog {
+  border-radius: var(--radius-xl) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+.el-dialog__header {
+  padding: var(--space-6) var(--space-6) var(--space-4) !important;
+}
+
+.el-dialog__body {
+  padding: var(--space-4) var(--space-6) !important;
+}
+
+.el-dialog__footer {
+  padding: var(--space-4) var(--space-6) var(--space-6) !important;
+}
+
+/* Tag */
+.el-tag {
+  border-radius: var(--radius-sm) !important;
+  font-weight: var(--font-medium);
+}
+
+/* Pagination */
+.el-pagination {
+  --el-pagination-button-bg-color: var(--bg-primary);
+  --el-pagination-hover-color: var(--color-primary);
+}
+
+.el-pagination .btn-prev,
+.el-pagination .btn-next,
+.el-pagination .el-pager li {
+  border-radius: var(--radius-sm) !important;
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-secondary) !important;
+}
+
+.el-pagination .el-pager li.is-active {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* Tabs */
+.el-tabs__item {
+  font-weight: var(--font-medium) !important;
+  transition: color var(--transition-fast) !important;
+}
+
+.el-tabs__active-bar {
+  background-color: var(--color-primary) !important;
+  border-radius: var(--radius-full);
+  height: 3px !important;
+}
+
+/* Form */
+.el-form-item__label {
+  font-weight: var(--font-medium) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Message */
+.el-message {
+  border-radius: var(--radius-md) !important;
+  border: none !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Alert */
+.el-alert {
+  border-radius: var(--radius-md) !important;
+}
+
+/* Dropdown */
+.el-dropdown-menu {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--border-secondary) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: var(--space-1) !important;
+}
+
+.el-dropdown-menu__item {
+  border-radius: var(--radius-sm) !important;
+  margin: 2px 0;
+  padding: 8px 16px !important;
+}
+
+/* Upload */
+.el-upload-dragger {
+  border-radius: var(--radius-lg) !important;
+  border: 2px dashed var(--border-primary) !important;
+  background: var(--bg-secondary) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.el-upload-dragger:hover {
+  border-color: var(--color-primary) !important;
+  background: var(--bg-hover) !important;
+}
+
+/* Collapse */
+.el-collapse {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* Date Picker */
+.el-date-editor {
+  --el-date-editor-width: 100%;
+}
+
+/* === Utility Classes === */
+
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.glass-heavy {
+  background: var(--bg-glass-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.container {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  :root {
+    --navbar-height: 56px;
+    --space-20: 48px;
+    --space-16: 40px;
+    --text-5xl: 36px;
+    --text-4xl: 28px;
+    --text-3xl: 22px;
+  }
+
+  .container {
+    padding: 0 var(--space-4);
+  }
+}

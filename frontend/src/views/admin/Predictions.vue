@@ -1,16 +1,10 @@
 <template>
-  <div class="admin-page">
-    <el-card>
-      <!-- 页面标题 -->
-      <template #header>
-        <div class="page-header">
-          <h3>识别记录管理</h3>
-        </div>
-      </template>
-
-      <!-- 操作栏 -->
-      <div class="toolbar">
-        <div class="toolbar-left">
+  <AdminLayout>
+    <div class="admin-page">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>识别记录管理</h1>
+        <div class="header-actions">
           <el-button
             type="danger"
             :disabled="selectedIds.length === 0"
@@ -18,90 +12,101 @@
           >
             批量删除 ({{ selectedIds.length }})
           </el-button>
-        </div>
-        <div class="toolbar-right">
           <el-button type="success" :icon="Download" @click="handleExport" :loading="exportLoading">
             导出数据
           </el-button>
-          <el-input
-            v-model="searchClass"
-            placeholder="搜索分类"
-            style="width: 200px; margin: 0 10px;"
-            clearable
-            @clear="handleSearch"
-            @keyup.enter="handleSearch"
-          />
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
         </div>
       </div>
 
-      <!-- 数据表格 -->
-      <el-table
-        :data="predictionList"
-        style="width: 100%"
-        v-loading="loading"
-        @selection-change="handleSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column label="序号" width="80">
-          <template #default="scope">
-            {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="username" label="用户" width="120" />
-        <el-table-column label="图片" width="120">
-          <template #default="scope">
-            <el-image
-              style="width: 80px; height: 80px"
-              :src="`/${scope.row.image_path}`"
-              fit="cover"
-              :preview-src-list="[`/${scope.row.image_path}`]"
-              preview-teleported
+      <!-- Content Card -->
+      <div class="content-card">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left"></div>
+          <div class="toolbar-right">
+            <el-input
+              v-model="searchClass"
+              placeholder="搜索分类"
+              style="width: 200px;"
+              clearable
+              @clear="handleSearch"
+              @keyup.enter="handleSearch"
             />
-          </template>
-        </el-table-column>
-        <el-table-column prop="predicted_class" label="分类" />
-        <el-table-column prop="confidence" label="置信度" width="100">
-          <template #default="scope">
-            {{ scope.row.confidence }}%
-          </template>
-        </el-table-column>
-        <el-table-column label="识别时间" width="180">
-          <template #default="scope">
-            {{ formatDateTime(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
-          <template #default="scope">
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDelete(scope.row.id)"
-            >
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+            <el-button type="primary" @click="handleSearch">搜索</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </div>
+        </div>
 
-      <!-- 分页 -->
-      <div class="pagination">
-        <span class="pagination-info">
-          第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
-        </span>
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="total"
-          layout="sizes, prev, pager, next"
-          @size-change="fetchPredictions"
-          @current-change="fetchPredictions"
-        />
+        <!-- Data Table -->
+        <el-table
+          :data="predictionList"
+          style="width: 100%"
+          v-loading="loading"
+          stripe
+          @selection-change="handleSelectionChange"
+          class="admin-table"
+        >
+          <el-table-column type="selection" width="55" />
+          <el-table-column label="#" width="70">
+            <template #default="scope">
+              {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="username" label="用户" width="120" />
+          <el-table-column label="图片" width="120">
+            <template #default="scope">
+              <el-image
+                style="width: 60px; height: 60px; border-radius: var(--radius-sm);"
+                :src="`/${scope.row.image_path}`"
+                fit="cover"
+                :preview-src-list="[`/${scope.row.image_path}`]"
+                preview-teleported
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="predicted_class" label="分类" />
+          <el-table-column prop="confidence" label="置信度" width="100">
+            <template #default="scope">
+              {{ scope.row.confidence }}%
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="180">
+            <template #default="scope">
+              {{ formatDateTime(scope.row.created_at) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right">
+            <template #default="scope">
+              <el-button
+                type="danger"
+                size="small"
+                link
+                @click="handleDelete(scope.row.id)"
+              >
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar">
+          <span class="pagination-info">
+            第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
+          </span>
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="sizes, prev, pager, next"
+            @size-change="fetchPredictions"
+            @current-change="fetchPredictions"
+          />
+        </div>
       </div>
-    </el-card>
-  </div>
+    </div>
+  </AdminLayout>
 </template>
 
 <script setup>
@@ -111,6 +116,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/date'
 import * as XLSX from 'xlsx'
+import AdminLayout from '@/components/AdminLayout.vue'
 
 const predictionList = ref([])
 const loading = ref(false)
@@ -251,52 +257,69 @@ onMounted(() => {
 
 <style scoped>
 .admin-page {
-  /* 统一的管理页面样式 */
+  padding: 0;
 }
 
 .page-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
 }
 
-.page-header h3 {
+.page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.content-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
 }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 16px;
-  background-color: var(--theme-card-bg);
-  border-radius: 4px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
 }
 
-.toolbar-left {
-  display: flex;
-  gap: 10px;
-}
-
+.toolbar-left,
 .toolbar-right {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
 }
 
-.pagination {
-  margin-top: 20px;
+.admin-table {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.pagination-bar {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .pagination-info {
-  font-size: 14px;
-  color: #606266;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
 }
 </style>

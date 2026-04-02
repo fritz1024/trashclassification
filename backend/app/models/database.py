@@ -18,6 +18,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="user")  # user, admin
+    avatar = Column(String(255), nullable=True)  # 头像路径
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

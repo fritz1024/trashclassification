@@ -19,3 +19,15 @@ export const getCurrentUser = () => {
 export const updatePassword = (data) => {
   return request.put('/auth/password', data)
 }
+
+// 更新个人资料
+export const updateProfile = (data) => {
+  return request.put('/auth/profile', data)
+}
+
+// 上传头像
+export const uploadAvatar = (formData) => {
+  return request.post('/auth/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}

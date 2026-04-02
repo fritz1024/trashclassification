@@ -1,14 +1,17 @@
 """
 认证相关API路由
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security.http import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Optional
+import os
+import uuid
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
 from app.core.redis_client import redis_client
-from app.schemas.user import UserCreate, UserLogin, UserResponse, Token, PasswordUpdate
+from app.core.config import settings
+from app.schemas.user import UserCreate, UserLogin, UserResponse, Token, PasswordUpdate, UserUpdate
 from app.models.database import User
 from datetime import timedelta
 from app.core.config import settings
@@ -222,3 +225,79 @@ def update_password(
     db.commit()
 
     return {"message": "密码修改成功"}
+
+
+@router.put("/profile", response_model=UserResponse)
+def update_profile(
+    profile_data: UserUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """更新个人资料"""
+    # 更新邮箱
+    if profile_data.email is not None:
+        # 检查邮箱是否已被其他用户使用
+        if profile_data.email:
+            existing = db.query(User).filter(
+                User.email == profile_data.email,
+                User.id != current_user.id
+            ).first()
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="邮箱已被其他用户使用"
+                )
+        current_user.email = profile_data.email
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """上传用户头像"""
+    # 检查文件类型
+    allowed = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="仅支持 jpg/png/gif/webp 格式的图片"
+        )
+
+    # 检查文件大小 (2MB)
+    contents = await file.read()
+    if len(contents) > 2 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="头像文件不能超过 2MB"
+        )
+
+    # 保存文件
+    avatar_dir = os.path.join(settings.UPLOAD_DIR, "avatars")
+    os.makedirs(avatar_dir, exist_ok=True)
+
+    filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(avatar_dir, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    # 删除旧头像文件
+    if current_user.avatar:
+        old_path = os.path.join(".", current_user.avatar)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    # 更新数据库
+    avatar_path = f"uploads/avatars/{filename}"
+    current_user.avatar = avatar_path
+    db.commit()
+    db.refresh(current_user)
+
+    return current_user

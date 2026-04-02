@@ -1,78 +1,86 @@
 <template>
   <div class="home">
-    <div class="hero-section">
-      <div class="hero-badge">智能环保守护者</div>
-      <h1>基于深度学习的<br/>智能垃圾分类系统</h1>
-      <p>上传图片，即时识别。让AI为您提供精准的垃圾分类指导，共建绿色生活。</p>
-      <el-button type="success" size="large" round @click="$router.push('/classify')">
-        立即开始体验
-      </el-button>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-content container">
+        <div class="hero-badge">
+          <el-icon :size="14"><Promotion /></el-icon>
+          智能环保守护者
+        </div>
+        <h1>基于深度学习的<br/>智能垃圾分类系统</h1>
+        <p class="hero-desc">上传图片，即时识别。让 AI 为您提供精准的垃圾分类指导，共建绿色生活。</p>
+        <div class="hero-actions">
+          <el-button type="primary" size="large" round @click="$router.push('/classify')">
+            <el-icon><MagicStick /></el-icon> 立即体验
+          </el-button>
+          <el-button size="large" round @click="$router.push('/ai-chat')">
+            <el-icon><ChatDotRound /></el-icon> AI 助手
+          </el-button>
+        </div>
 
-      <div class="upload-demo">
-        <div class="demo-box">
-          <el-icon size="60" color="#10b981"><Picture /></el-icon>
-          <p>将垃圾图片拖拽至此，或点击上传</p>
+        <div class="hero-upload-hint" @click="$router.push('/classify')">
+          <div class="upload-box">
+            <el-icon :size="40" color="var(--color-primary-light)"><UploadFilled /></el-icon>
+            <p>将垃圾图片拖拽至此，或点击上传</p>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="announcements-section" v-if="announcements.length > 0">
-      <h2>📢 通知公告</h2>
+    <!-- Announcements -->
+    <section class="announcements container" v-if="announcements.length > 0">
+      <div class="section-header">
+        <h2>通知公告</h2>
+      </div>
       <div class="announcement-list">
-        <div v-for="item in announcements" :key="item.id" class="announcement-item">
-          <el-tag :type="getTypeColor(item.type)" size="small">{{ getTypeName(item.type) }}</el-tag>
-          <span class="announcement-title">{{ item.title }}</span>
-          <span class="announcement-content">{{ item.content }}</span>
+        <div v-for="item in announcements" :key="item.id" class="announcement-card">
+          <el-tag :type="getTypeColor(item.type)" size="small" round>{{ getTypeName(item.type) }}</el-tag>
+          <div class="announcement-body">
+            <span class="announcement-title">{{ item.title }}</span>
+            <span class="announcement-text">{{ item.content }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="features-section">
-      <h2>强大的AI识别能力</h2>
-      <p class="subtitle">结合前沿的深度学习技术，让垃圾分类变得简单而有趣</p>
+    <!-- Features Section -->
+    <section class="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>强大的 AI 识别能力</h2>
+          <p>结合前沿的深度学习技术，让垃圾分类变得简单而有趣</p>
+        </div>
 
-      <el-row :gutter="20" class="feature-cards">
-        <el-col :span="8">
-          <div class="feature-card">
-            <el-icon size="40" color="#10b981"><MagicStick /></el-icon>
-            <h3>深度学习引擎</h3>
-            <p>采用业内领先的深度学习算法，并上传你的图像进行识别分类，精确度高达90%以上。</p>
+        <div class="feature-grid">
+          <div class="feature-card" v-for="(feat, i) in features" :key="i">
+            <div class="feature-icon" :style="{ background: feat.bg }">
+              <el-icon :size="24" color="#fff"><component :is="feat.icon" /></el-icon>
+            </div>
+            <h3>{{ feat.title }}</h3>
+            <p>{{ feat.desc }}</p>
           </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="feature-card">
-            <el-icon size="40" color="#10b981"><Odometer /></el-icon>
-            <h3>10大常见垃圾</h3>
-            <p>全面覆盖生活中的10种，塑料、金属、玻璃等10种垃圾类型识别，满足您的各类需求。</p>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="feature-card">
-            <el-icon size="40" color="#10b981"><Timer /></el-icon>
-            <h3>实时云端记录</h3>
-            <p>自动保存你的识别历史记录并进行云端同步，随时随地查看您的历史记录。</p>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
-
-    <div class="categories-section">
-      <h2>支持的垃圾类别</h2>
-      <p class="subtitle">我们训练了海量数据，覆盖生活中各种垃圾类别</p>
-
-      <div class="category-tags">
-        <el-tag size="large" effect="plain">厨余垃圾</el-tag>
-        <el-tag size="large" effect="plain">塑料</el-tag>
-        <el-tag size="large" effect="plain">干电池</el-tag>
-        <el-tag size="large" effect="plain">旧衣服</el-tag>
-        <el-tag size="large" effect="plain">玻璃</el-tag>
-        <el-tag size="large" effect="plain">纸板</el-tag>
-        <el-tag size="large" effect="plain">金属</el-tag>
-        <el-tag size="large" effect="plain">陶瓷罐</el-tag>
-        <el-tag size="large" effect="plain">鞋</el-tag>
-        <el-tag size="large" effect="plain">纸张</el-tag>
+        </div>
       </div>
-    </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="categories">
+      <div class="container">
+        <div class="section-header">
+          <h2>支持的垃圾类别</h2>
+          <p>覆盖生活中各种垃圾类别，4 大分类共 265 种细分类别</p>
+        </div>
+
+        <div class="category-grid">
+          <div class="category-card" v-for="(cat, i) in categories" :key="i" :style="{ '--cat-color': cat.color }">
+            <div class="category-icon">{{ cat.emoji }}</div>
+            <h4>{{ cat.name }}</h4>
+            <span class="category-count">{{ cat.count }} 种</span>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -82,214 +90,319 @@ import axios from 'axios'
 
 const announcements = ref([])
 
+const features = [
+  { icon: 'MagicStick', title: '深度学习引擎', desc: '采用 MobileNetV2 模型，上传图片即可精准识别垃圾类别。', bg: 'linear-gradient(135deg, #10b981, #059669)' },
+  { icon: 'Odometer', title: '265 种垃圾类别', desc: '全面覆盖厨余垃圾、可回收物、有害垃圾、其他垃圾四大类。', bg: 'linear-gradient(135deg, #6366f1, #4f46e5)' },
+  { icon: 'Timer', title: '实时云端记录', desc: '自动保存识别历史，数据统计一目了然，支持导出报告。', bg: 'linear-gradient(135deg, #f59e0b, #d97706)' },
+]
+
+const categories = [
+  { name: '厨余垃圾', count: 52, emoji: '🍎', color: '#10b981' },
+  { name: '可回收物', count: 149, emoji: '♻️', color: '#6366f1' },
+  { name: '其他垃圾', count: 50, emoji: '🗑️', color: '#64748b' },
+  { name: '有害垃圾', count: 14, emoji: '☠️', color: '#ef4444' },
+]
+
 const fetchAnnouncements = async () => {
   try {
-    const response = await axios.get('/api/announcements/list', {
-      params: { published_only: true, limit: 5 }
-    })
+    const response = await axios.get('/api/announcements/list', { params: { published_only: true, limit: 5 } })
     announcements.value = response.data.items
   } catch (error) {
     console.error('获取公告失败:', error)
   }
 }
 
-const getTypeColor = (type) => {
-  const colors = { info: '', warning: 'warning', success: 'success', error: 'danger' }
-  return colors[type] || ''
-}
+const getTypeColor = (type) => ({ info: '', warning: 'warning', success: 'success', error: 'danger' }[type] || '')
+const getTypeName = (type) => ({ info: '信息', warning: '警告', success: '成功', error: '错误' }[type] || type)
 
-const getTypeName = (type) => {
-  const names = { info: '信息', warning: '警告', success: '成功', error: '错误' }
-  return names[type] || type
-}
-
-onMounted(() => {
-  fetchAnnouncements()
-})
+onMounted(() => fetchAnnouncements())
 </script>
 
 <style scoped>
-.home {
-  width: 100%;
-  padding: 0;
-  margin: 0;
+/* === Hero === */
+.hero {
+  position: relative;
+  padding: var(--space-20) 0;
+  text-align: center;
+  overflow: hidden;
 }
 
-.hero-section {
-  text-align: center;
-  padding: 80px 40px;
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%);
-  margin: 0;
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, var(--color-primary-lightest) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+  z-index: 0;
+}
+
+[data-theme="dark"] .hero-bg {
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
 }
 
 .hero-badge {
-  display: inline-block;
-  background: rgba(16, 185, 129, 0.2);
-  color: #047857;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 14px;
-  margin-bottom: 20px;
-  border: 1px solid #10b981;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-primary-lightest);
+  color: var(--color-primary-dark);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--color-primary-lighter);
 }
 
-.hero-section h1 {
-  font-size: 42px;
-  margin-bottom: 20px;
-  color: #064e3b;
-  font-weight: 700;
-  line-height: 1.3;
+.hero h1 {
+  font-size: var(--text-5xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+  margin-bottom: var(--space-5);
 }
 
-.hero-section p {
-  font-size: 16px;
-  margin-bottom: 30px;
-  color: #065f46;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+.hero-desc {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  max-width: 560px;
+  margin: 0 auto var(--space-8);
+  line-height: var(--leading-relaxed);
 }
 
-.upload-demo {
-  margin-top: 40px;
+.hero-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  margin-bottom: var(--space-12);
 }
 
-.demo-box {
-  background: white;
-  border: 2px dashed #10b981;
-  border-radius: 12px;
-  padding: 40px;
-  max-width: 500px;
+.hero-upload-hint {
+  cursor: pointer;
+  max-width: 480px;
   margin: 0 auto;
 }
 
-.demo-box p {
-  margin-top: 16px;
-  color: #10b981;
-  font-size: 14px;
+.upload-box {
+  background: var(--bg-elevated);
+  border: 2px dashed var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-10) var(--space-8);
+  transition: all var(--transition-normal);
 }
 
-.announcements-section {
-  padding: 60px 40px;
-  background: #f0fdf4;
+.upload-box:hover {
+  border-color: var(--color-primary);
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-primary);
 }
 
-.announcements-section h2 {
-  font-size: 32px;
-  color: #1f2937;
-  margin-bottom: 30px;
+.upload-box p {
+  margin-top: var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+}
+
+/* === Sections Common === */
+.section-header {
   text-align: center;
+  margin-bottom: var(--space-10);
+}
+
+.section-header h2 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.section-header p {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
+/* === Announcements === */
+.announcements {
+  padding: var(--space-12) var(--space-6);
 }
 
 .announcement-list {
-  max-width: 1000px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-3);
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.announcement-item {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
+.announcement-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  gap: var(--space-4);
+  background: var(--bg-elevated);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-secondary);
+  transition: all var(--transition-fast);
+}
+
+.announcement-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.announcement-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+  min-width: 0;
 }
 
 .announcement-title {
-  font-weight: 600;
-  color: #1f2937;
-  font-size: 16px;
-  min-width: 150px;
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  white-space: nowrap;
 }
 
-.announcement-content {
-  color: #6b7280;
-  font-size: 14px;
-  flex: 1;
+.announcement-text {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.features-section {
-  text-align: center;
-  padding: 60px 40px;
-  background: white;
+/* === Features === */
+.features {
+  padding: var(--space-16) 0;
+  background: var(--bg-primary);
 }
 
-.features-section h2 {
-  font-size: 32px;
-  color: #1f2937;
-  margin-bottom: 12px;
-}
-
-.subtitle {
-  color: #6b7280;
-  font-size: 16px;
-  margin-bottom: 40px;
-}
-
-.feature-cards {
-  margin-top: 40px;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 0 40px;
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
 }
 
 .feature-card {
-  background: #f9fafb;
-  padding: 30px 20px;
-  border-radius: 12px;
-  transition: transform 0.3s, box-shadow 0.3s;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-6);
   text-align: center;
+  transition: all var(--transition-normal);
 }
 
 .feature-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-primary-lighter);
+}
+
+.feature-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-5);
 }
 
 .feature-card h3 {
-  margin: 20px 0 12px;
-  color: #1f2937;
-  font-size: 18px;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
 }
 
 .feature-card p {
-  color: #6b7280;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
 }
 
-.categories-section {
+/* === Categories === */
+.categories {
+  padding: var(--space-16) 0;
+  background: var(--bg-secondary);
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
+}
+
+.category-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-5);
   text-align: center;
-  padding: 60px 40px;
-  background: #f9fafb;
+  transition: all var(--transition-normal);
+  cursor: default;
 }
 
-.categories-section h2 {
-  font-size: 32px;
-  color: #1f2937;
-  margin-bottom: 12px;
+.category-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--cat-color);
 }
 
-.category-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 30px;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+.category-icon {
+  font-size: 40px;
+  margin-bottom: var(--space-4);
 }
 
-.category-tags .el-tag {
-  padding: 10px 20px;
-  font-size: 15px;
-  border-color: #10b981;
-  color: #047857;
+.category-card h4 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.category-count {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
+}
+
+/* === Responsive === */
+@media (max-width: 1024px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--space-12) 0;
+  }
+  .hero h1 {
+    font-size: var(--text-3xl);
+  }
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .announcement-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
 }
 </style>

@@ -39,6 +39,7 @@ class UserResponse(UserBase):
     """用户响应模型"""
     id: int
     role: str
+    avatar: Optional[str] = None
     is_active: bool
     created_at: datetime
 

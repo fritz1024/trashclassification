@@ -1,193 +1,174 @@
 <template>
-  <div class="model-page">
-    <el-card>
-      <template #header>
-        <div class="page-header">
-          <h3>模型管理</h3>
-          <div>
-            <el-button @click="showCompareDialog = true">
-              <el-icon><DataAnalysis /></el-icon>
-              模型对比
-            </el-button>
-            <el-button type="primary" @click="showUploadDialog = true">
-              <el-icon><Upload /></el-icon>
-              上传模型
-            </el-button>
-          </div>
+  <AdminLayout>
+    <div class="model-page">
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1 class="page-title">模型管理</h1>
+        <div class="header-actions">
+          <el-button @click="showCompareDialog = true">
+            <el-icon><DataAnalysis /></el-icon>
+            模型对比
+          </el-button>
+          <el-button type="primary" @click="showUploadDialog = true">
+            <el-icon><Upload /></el-icon>
+            上传模型
+          </el-button>
         </div>
-      </template>
+      </div>
 
-      <!-- 当前使用的模型信息 -->
-      <div class="section-title">当前模型信息</div>
-      <el-row :gutter="20" v-loading="infoLoading">
-        <el-col :span="6">
-          <div class="info-card">
-            <div class="info-label">模型名称</div>
-            <div class="info-value">{{ modelInfo.model_name }}</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="info-card">
-            <div class="info-label">模型文件</div>
-            <div class="info-value">{{ modelInfo.model_file }}</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="info-card">
-            <div class="info-label">模型大小</div>
-            <div class="info-value">{{ modelInfo.model_size_mb }} MB</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="info-card">
-            <div class="info-label">最后更新</div>
-            <div class="info-value">{{ modelInfo.model_updated || '未知' }}</div>
-          </div>
-        </el-col>
-      </el-row>
+      <!-- Current Model Info -->
+      <h2 class="section-title">当前模型信息</h2>
+      <div class="info-grid" v-loading="infoLoading">
+        <div class="info-card">
+          <span class="info-label">模型名称</span>
+          <span class="info-value">{{ modelInfo.model_name }}</span>
+        </div>
+        <div class="info-card">
+          <span class="info-label">模型文件</span>
+          <span class="info-value">{{ modelInfo.model_file }}</span>
+        </div>
+        <div class="info-card">
+          <span class="info-label">模型大小</span>
+          <span class="info-value">{{ modelInfo.model_size_mb }} MB</span>
+        </div>
+        <div class="info-card">
+          <span class="info-label">最后更新</span>
+          <span class="info-value">{{ modelInfo.model_updated || '未知' }}</span>
+        </div>
+      </div>
 
-      <!-- 模型列表 -->
-      <div class="section-title" style="margin-top: 30px;">
-        <span>所有模型</span>
-        <el-button type="text" @click="fetchModelList" :loading="listLoading">
+      <!-- Model List -->
+      <div class="section-header">
+        <h2 class="section-title">所有模型</h2>
+        <el-button text @click="fetchModelList" :loading="listLoading">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
       </div>
-      <el-table :data="modelList" v-loading="listLoading" style="width: 100%">
-        <el-table-column label="模型文件" min-width="200">
-          <template #default="scope">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span>{{ scope.row.name }}</span>
-              <el-tag v-if="scope.row.is_current" type="success" size="small">当前使用</el-tag>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="size_mb" label="大小 (MB)" width="120" />
-        <el-table-column prop="updated_at" label="更新时间" width="180" />
-        <el-table-column label="操作" width="200">
-          <template #default="scope">
-            <el-button
-              v-if="!scope.row.is_current"
-              type="primary"
-              size="small"
-              @click="handleSwitchModel(scope.row.name)"
-            >
-              切换
-            </el-button>
-            <el-button
-              v-if="!scope.row.is_current"
-              type="danger"
-              size="small"
-              @click="handleDeleteModel(scope.row.name)"
-            >
-              删除
-            </el-button>
-            <el-tag v-else type="info" size="small">使用中</el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 性能统计 -->
-      <div class="section-title" style="margin-top: 30px;">性能统计</div>
-      <el-row :gutter="20" v-loading="performanceLoading">
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #ecf5ff;">
-              <el-icon color="#409eff" :size="28"><DataAnalysis /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">总识别次数</div>
-              <div class="stat-value">{{ performance.total_predictions }}</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #f0f9ff;">
-              <el-icon color="#67c23a" :size="28"><TrendCharts /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">平均置信度</div>
-              <div class="stat-value">{{ performance.avg_confidence }}%</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #f0f9ff;">
-              <el-icon color="#67c23a" :size="28"><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">高置信度率</div>
-              <div class="stat-value">{{ performance.high_confidence_rate }}%</div>
-            </div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #fef0f0;">
-              <el-icon color="#f56c6c" :size="28"><WarningFilled /></el-icon>
-            </div>
-            <div class="stat-content">
-              <div class="stat-label">低置信度数</div>
-              <div class="stat-value">{{ performance.low_confidence_count }}</div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-
-      <!-- 分类分布图表 -->
-      <el-row :gutter="20" style="margin-top: 20px;">
-        <el-col :span="24">
-          <el-card>
-            <template #header>
-              <span>分类识别分布</span>
+      <div class="content-card">
+        <el-table :data="modelList" v-loading="listLoading" style="width: 100%">
+          <el-table-column label="模型文件" min-width="200">
+            <template #default="scope">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>{{ scope.row.name }}</span>
+                <el-tag v-if="scope.row.is_current" type="success" size="small">当前使用</el-tag>
+              </div>
             </template>
-            <div ref="categoryChart" style="width: 100%; height: 300px;"></div>
-          </el-card>
-        </el-col>
-      </el-row>
+          </el-table-column>
+          <el-table-column prop="size_mb" label="大小 (MB)" width="120" />
+          <el-table-column prop="updated_at" label="更新时间" width="180" />
+          <el-table-column label="操作" width="200">
+            <template #default="scope">
+              <el-button
+                v-if="!scope.row.is_current"
+                type="primary"
+                size="small"
+                @click="handleSwitchModel(scope.row.name)"
+              >
+                切换
+              </el-button>
+              <el-button
+                v-if="!scope.row.is_current"
+                type="danger"
+                size="small"
+                @click="handleDeleteModel(scope.row.name)"
+              >
+                删除
+              </el-button>
+              <el-tag v-else type="info" size="small">使用中</el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
-      <!-- 错误案例 -->
-      <div class="section-title" style="margin-top: 30px;">错误识别案例</div>
-      <el-table :data="errorCases" v-loading="errorLoading" style="width: 100%">
-        <el-table-column prop="index" label="序号" width="80" />
-        <el-table-column label="图片" width="120">
-          <template #default="scope">
-            <el-image
-              :src="`http://localhost:8000/${scope.row.image_path}`"
-              :preview-src-list="[`http://localhost:8000/${scope.row.image_path}`]"
-              fit="cover"
-              style="width: 80px; height: 80px; border-radius: 4px;"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="predicted_class" label="预测分类" width="120">
-          <template #default="scope">
-            <el-tag type="danger">{{ scope.row.predicted_class }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="correct_class" label="正确分类" width="120">
-          <template #default="scope">
-            <el-tag type="success">{{ scope.row.correct_class }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="confidence" label="置信度" width="100">
-          <template #default="scope">
-            {{ scope.row.confidence }}%
-          </template>
-        </el-table-column>
-        <el-table-column prop="comment" label="用户反馈" min-width="200" />
-        <el-table-column prop="created_at" label="识别时间" width="180">
-          <template #default="scope">
-            {{ formatDate(scope.row.created_at) }}
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <!-- Performance Stats -->
+      <h2 class="section-title">性能统计</h2>
+      <div class="stats-grid" v-loading="performanceLoading">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #818cf8)">
+            <el-icon color="#fff" :size="24"><DataAnalysis /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ performance.total_predictions }}</span>
+            <span class="stat-label">总识别次数</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #34d399)">
+            <el-icon color="#fff" :size="24"><TrendCharts /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ performance.avg_confidence }}%</span>
+            <span class="stat-label">平均置信度</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #6ee7b7)">
+            <el-icon color="#fff" :size="24"><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ performance.high_confidence_rate }}%</span>
+            <span class="stat-label">高置信度率</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #ef4444, #f87171)">
+            <el-icon color="#fff" :size="24"><WarningFilled /></el-icon>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value">{{ performance.low_confidence_count }}</span>
+            <span class="stat-label">低置信度数</span>
+          </div>
+        </div>
+      </div>
 
-    <!-- 上传模型对话框 -->
+      <!-- Category Distribution Chart -->
+      <div class="chart-card">
+        <h3>分类识别分布</h3>
+        <div ref="categoryChart" class="chart-area"></div>
+      </div>
+
+      <!-- Error Cases -->
+      <h2 class="section-title">错误识别案例</h2>
+      <div class="content-card">
+        <el-table :data="errorCases" v-loading="errorLoading" style="width: 100%">
+          <el-table-column prop="index" label="序号" width="80" />
+          <el-table-column label="图片" width="120">
+            <template #default="scope">
+              <el-image
+                :src="`/${scope.row.image_path}`"
+                :preview-src-list="[`/${scope.row.image_path}`]"
+                fit="cover"
+                style="width: 80px; height: 80px; border-radius: 4px;"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column prop="predicted_class" label="预测分类" width="120">
+            <template #default="scope">
+              <el-tag type="danger">{{ scope.row.predicted_class }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="correct_class" label="正确分类" width="120">
+            <template #default="scope">
+              <el-tag type="success">{{ scope.row.correct_class }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="confidence" label="置信度" width="100">
+            <template #default="scope">
+              {{ scope.row.confidence }}%
+            </template>
+          </el-table-column>
+          <el-table-column prop="comment" label="用户反馈" min-width="200" />
+          <el-table-column prop="created_at" label="识别时间" width="180">
+            <template #default="scope">
+              {{ formatDate(scope.row.created_at) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
+
+    <!-- Upload Model Dialog -->
     <el-dialog v-model="showUploadDialog" title="上传模型" width="500px">
       <el-upload
         ref="uploadRef"
@@ -213,7 +194,7 @@
       </template>
     </el-dialog>
 
-    <!-- 模型对比对话框 -->
+    <!-- Compare Dialog -->
     <el-dialog v-model="showCompareDialog" title="模型性能对比" width="800px">
       <el-table :data="comparisonData" v-loading="compareLoading" style="width: 100%">
         <el-table-column prop="model_name" label="模型名称" min-width="150" />
@@ -230,14 +211,15 @@
         </el-table-column>
       </el-table>
     </el-dialog>
-  </div>
+  </AdminLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
+import AdminLayout from '@/components/AdminLayout.vue'
 
 const modelInfo = ref({
   model_name: '',
@@ -270,6 +252,9 @@ const uploadRef = ref(null)
 const showCompareDialog = ref(false)
 const compareLoading = ref(false)
 const comparisonData = ref([])
+
+// Track chart instance for cleanup
+let chartInstance = null
 
 // 获取模型信息
 const fetchModelInfo = async () => {
@@ -436,8 +421,11 @@ const handleUpload = async () => {
 // 初始化分类分布图表
 const initCategoryChart = () => {
   if (categoryChart.value && performance.value.category_distribution.length > 0) {
-    const chart = echarts.init(categoryChart.value)
-    chart.setOption({
+    if (chartInstance && !chartInstance.isDisposed()) {
+      chartInstance.dispose()
+    }
+    chartInstance = echarts.init(categoryChart.value)
+    chartInstance.setOption({
       tooltip: {
         trigger: 'item',
         formatter: '{b}: {c} ({d}%)'
@@ -506,98 +494,210 @@ const formatDate = (dateStr) => {
   return date.toLocaleString('zh-CN')
 }
 
+// Resize handler
+const handleResize = () => {
+  if (chartInstance && !chartInstance.isDisposed()) {
+    chartInstance.resize()
+  }
+}
+
 onMounted(() => {
   fetchModelInfo()
   fetchModelList()
   fetchPerformance()
   fetchErrorCases()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  if (chartInstance && !chartInstance.isDisposed()) {
+    chartInstance.dispose()
+  }
+  chartInstance = null
 })
 </script>
 
 <style scoped>
 .model-page {
-  padding: 20px;
+  padding: var(--space-2) 0;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--space-6);
 }
 
-.page-header h3 {
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-3);
 }
 
 .section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 16px;
-  padding-left: 12px;
-  border-left: 4px solid #409eff;
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: var(--space-8) 0 var(--space-5) 0;
+}
+
+.section-title:first-of-type {
+  margin-top: 0;
+}
+
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin: var(--space-8) 0 var(--space-5) 0;
+}
+
+.section-header .section-title {
+  margin: 0;
+}
+
+/* Info Grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
 }
 
 .info-card {
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-label {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
 }
 
 .info-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-5);
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  padding: 20px;
-  background: #fff;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  transition: all 0.3s;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .stat-card:hover {
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
+  flex-shrink: 0;
 }
 
-.stat-content {
-  flex: 1;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 4px;
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
+}
+
+/* Content Card */
+.content-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5) var(--space-6);
+  overflow: hidden;
+}
+
+/* Chart Card */
+.chart-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5) var(--space-6);
+  margin-top: var(--space-5);
+}
+
+.chart-card h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.chart-area {
+  width: 100%;
+  height: 300px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .info-grid,
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .info-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

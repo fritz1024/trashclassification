@@ -20,28 +20,41 @@ const routes = [
     component: () => import('@/views/Classify.vue')
   },
   {
-    path: '/history',
-    name: 'History',
-    component: () => import('@/views/History.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/stats',
-    name: 'Stats',
-    component: () => import('@/views/Stats.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/Profile.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
     path: '/ai-chat',
     name: 'AiChat',
     component: () => import('@/views/AiChat.vue')
   },
+
+  // 用户中心路由
+  {
+    path: '/user/profile',
+    name: 'UserProfile',
+    component: () => import('@/views/user/Profile.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/history',
+    name: 'UserHistory',
+    component: () => import('@/views/user/History.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/stats',
+    name: 'UserStats',
+    component: () => import('@/views/user/Stats.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/security',
+    name: 'UserSecurity',
+    component: () => import('@/views/user/Security.vue'),
+    meta: { requiresAuth: true }
+  },
+
+  // 旧路由重定向
+  { path: '/history', redirect: '/user/history' },
+  { path: '/stats', redirect: '/user/stats' },
+  { path: '/profile', redirect: '/user/profile' },
 
   // 管理端路由
   {
@@ -90,6 +103,11 @@ const routes = [
     name: 'AdminSettings',
     component: () => import('@/views/admin/Settings.vue'),
     meta: { requiresAdmin: true }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue')
   }
 ]
 
@@ -98,11 +116,9 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
 
-  // 管理员路由验证
   if (to.meta.requiresAdmin) {
     if (!userStore.isLoggedIn || userStore.user?.role !== 'admin') {
       ElMessage.warning('需要管理员权限')
@@ -111,7 +127,6 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 普通用户路由验证
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     next('/login')

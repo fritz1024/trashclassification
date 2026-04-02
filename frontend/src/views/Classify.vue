@@ -1,239 +1,201 @@
 <template>
-  <div class="classify">
-    <el-card>
-      <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2>智能垃圾识别</h2>
-          <el-tag v-if="currentModel" type="info">
-            当前模型: {{ currentModel }}
-          </el-tag>
-        </div>
-      </template>
+  <div class="classify-page container">
+    <div class="page-header">
+      <h1>智能垃圾识别</h1>
+      <el-tag v-if="currentModel" round type="info" size="small">模型: {{ currentModel }}</el-tag>
+    </div>
 
-      <el-tabs v-model="activeTab">
+    <div class="classify-card">
+      <el-tabs v-model="activeTab" class="classify-tabs">
         <!-- 单张识别 -->
         <el-tab-pane label="单张识别" name="single">
-          <el-upload
-            class="upload-demo"
-            drag
-            :auto-upload="false"
-            :on-change="handleFileChange"
-            :show-file-list="false"
-            accept="image/*"
-          >
-            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-            <div class="el-upload__text">
-              将图片拖到此处，或<em>点击上传</em>
+          <div class="tab-content">
+            <el-upload
+              class="upload-area"
+              drag
+              :auto-upload="false"
+              :on-change="handleFileChange"
+              :show-file-list="false"
+              accept="image/*"
+            >
+              <div class="upload-inner">
+                <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                <p class="upload-text">将图片拖到此处，或<em>点击上传</em></p>
+                <p class="upload-hint">支持 JPG、PNG、BMP 格式</p>
+              </div>
+            </el-upload>
+
+            <div v-if="previewImage" class="preview-area">
+              <img :src="previewImage" alt="预览图" />
+              <el-button type="primary" round @click="handlePredict" :loading="predicting">
+                <el-icon><MagicStick /></el-icon> 开始识别
+              </el-button>
             </div>
-          </el-upload>
 
-          <div v-if="previewImage" class="preview-section">
-            <img :src="previewImage" alt="预览图" />
-            <el-button type="primary" @click="handlePredict" :loading="predicting">
-              开始识别
-            </el-button>
-          </div>
-
-          <div v-if="result" class="result-section">
-            <el-result icon="success" title="识别完成">
-              <template #sub-title>
-                <div class="result-details">
-                  <h3>识别结果：{{ result.predicted_class }}</h3>
-                  <p>置信度：{{ result.confidence }}%</p>
-
-                  <el-divider />
-
-                  <h4>Top 3 预测结果：</h4>
-                  <el-table :data="result.top3_results" style="width: 100%">
-                    <el-table-column prop="class_name" label="分类" />
-                    <el-table-column prop="confidence" label="置信度">
-                      <template #default="scope">
-                        {{ scope.row.confidence }}%
-                      </template>
-                    </el-table-column>
-                  </el-table>
-
-                  <div v-if="userStore.isLoggedIn" style="margin-top: 20px;">
-                    <el-button type="warning" @click="handleShowFeedback(result)">
-                      识别有误？提交反馈
-                    </el-button>
-                  </div>
-                  <div v-else style="margin-top: 20px; color: #999; font-size: 14px;">
-                    登录后可提交反馈帮助改进识别准确度
+            <Transition name="page-fade">
+              <div v-if="result" class="result-card">
+                <div class="result-header">
+                  <el-icon :size="24" color="var(--color-success)"><SuccessFilled /></el-icon>
+                  <div>
+                    <h3>{{ result.predicted_class }}</h3>
+                    <span class="confidence">置信度 {{ result.confidence }}%</span>
                   </div>
                 </div>
-              </template>
-            </el-result>
+
+                <div class="top3-list">
+                  <div v-for="(item, i) in result.top3_results" :key="i" class="top3-item">
+                    <span class="top3-rank">#{{ i + 1 }}</span>
+                    <span class="top3-name">{{ item.class_name }}</span>
+                    <div class="top3-bar-bg">
+                      <div class="top3-bar" :style="{ width: item.confidence + '%' }"></div>
+                    </div>
+                    <span class="top3-pct">{{ item.confidence }}%</span>
+                  </div>
+                </div>
+
+                <div class="result-actions">
+                  <el-button v-if="userStore.isLoggedIn" round @click="handleShowFeedback(result)">
+                    <el-icon><WarningFilled /></el-icon> 识别有误？反馈
+                  </el-button>
+                  <span v-else class="hint-text">登录后可提交反馈帮助改进准确度</span>
+                </div>
+              </div>
+            </Transition>
           </div>
         </el-tab-pane>
 
         <!-- 摄像头识别 -->
         <el-tab-pane label="摄像头识别" name="camera">
-          <div class="camera-section">
-            <div v-if="!cameraActive" class="camera-start">
-              <el-button type="primary" size="large" @click="startCamera">
-                <el-icon><Camera /></el-icon>
-                打开摄像头
+          <div class="tab-content camera-content">
+            <div v-if="!cameraActive" class="camera-placeholder">
+              <el-icon :size="48" color="var(--text-tertiary)"><Camera /></el-icon>
+              <p>点击下方按钮开启摄像头</p>
+              <el-button type="primary" round size="large" @click="startCamera">
+                <el-icon><Camera /></el-icon> 打开摄像头
               </el-button>
-              <p style="margin-top: 10px; color: #999;">需要允许浏览器访问摄像头权限</p>
+              <span class="hint-text">需要允许浏览器访问摄像头权限</span>
             </div>
 
-            <div v-else class="camera-active">
+            <div v-else class="camera-live">
               <video ref="videoElement" autoplay playsinline></video>
               <canvas ref="canvasElement" style="display: none;"></canvas>
-
               <div class="camera-controls">
-                <el-button type="primary" @click="capturePhoto" :loading="predicting">
-                  <el-icon><Camera /></el-icon>
-                  拍照识别
+                <el-button type="primary" round @click="capturePhoto" :loading="predicting">
+                  <el-icon><Camera /></el-icon> 拍照识别
                 </el-button>
-                <el-button @click="stopCamera">
-                  <el-icon><Close /></el-icon>
-                  关闭摄像头
+                <el-button round @click="stopCamera">
+                  <el-icon><Close /></el-icon> 关闭
                 </el-button>
               </div>
             </div>
 
-            <div v-if="cameraResult" class="result-section">
-              <el-result icon="success" title="识别完成">
-                <template #sub-title>
-                  <div class="result-details">
-                    <h3>识别结果：{{ cameraResult.predicted_class }}</h3>
-                    <p>置信度：{{ cameraResult.confidence }}%</p>
-
-                    <el-divider />
-
-                    <h4>Top 3 预测结果：</h4>
-                    <el-table :data="cameraResult.top3_results" style="width: 100%">
-                      <el-table-column prop="class_name" label="分类" />
-                      <el-table-column prop="confidence" label="置信度">
-                        <template #default="scope">
-                          {{ scope.row.confidence }}%
-                        </template>
-                      </el-table-column>
-                    </el-table>
-
-                    <div v-if="userStore.isLoggedIn" style="margin-top: 20px;">
-                      <el-button type="warning" @click="handleShowFeedback(cameraResult)">
-                        识别有误？提交反馈
-                      </el-button>
-                    </div>
-                    <div v-else style="margin-top: 20px; color: #999; font-size: 14px;">
-                      登录后可提交反馈帮助改进识别准确度
-                    </div>
+            <Transition name="page-fade">
+              <div v-if="cameraResult" class="result-card">
+                <div class="result-header">
+                  <el-icon :size="24" color="var(--color-success)"><SuccessFilled /></el-icon>
+                  <div>
+                    <h3>{{ cameraResult.predicted_class }}</h3>
+                    <span class="confidence">置信度 {{ cameraResult.confidence }}%</span>
                   </div>
-                </template>
-              </el-result>
-            </div>
+                </div>
+                <div class="top3-list">
+                  <div v-for="(item, i) in cameraResult.top3_results" :key="i" class="top3-item">
+                    <span class="top3-rank">#{{ i + 1 }}</span>
+                    <span class="top3-name">{{ item.class_name }}</span>
+                    <div class="top3-bar-bg">
+                      <div class="top3-bar" :style="{ width: item.confidence + '%' }"></div>
+                    </div>
+                    <span class="top3-pct">{{ item.confidence }}%</span>
+                  </div>
+                </div>
+                <div class="result-actions">
+                  <el-button v-if="userStore.isLoggedIn" round @click="handleShowFeedback(cameraResult)">
+                    <el-icon><WarningFilled /></el-icon> 识别有误？反馈
+                  </el-button>
+                </div>
+              </div>
+            </Transition>
           </div>
         </el-tab-pane>
 
         <!-- 批量识别 -->
         <el-tab-pane name="batch">
           <template #label>
-            <span>
+            <span class="tab-label-with-icon">
               批量识别
-              <el-tooltip v-if="!userStore.isLoggedIn" content="需要登录后使用" placement="top">
-                <el-icon style="color: #909399; margin-left: 4px;"><Lock /></el-icon>
-              </el-tooltip>
+              <el-icon v-if="!userStore.isLoggedIn" style="color: var(--text-tertiary); margin-left: 4px;"><Lock /></el-icon>
             </span>
           </template>
 
-          <el-alert
-            v-if="!userStore.isLoggedIn"
-            title="批量识别需要登录"
-            type="warning"
-            :closable="false"
-            show-icon
-            style="margin-bottom: 20px;"
-          >
-            <template #default>
-              <p>批量识别功能需要登录后才能使用，登录后可以：</p>
-              <ul style="margin: 10px 0; padding-left: 20px;">
-                <li>一次上传最多10张图片</li>
-                <li>保存识别历史记录</li>
-                <li>查看个人数据统计</li>
-              </ul>
-              <el-button type="primary" size="small" @click="handleShowLogin">
-                立即登录
+          <div class="tab-content">
+            <el-alert v-if="!userStore.isLoggedIn" type="warning" :closable="false" show-icon style="margin-bottom: var(--space-5); border-radius: var(--radius-md);">
+              <template #title>批量识别需要登录</template>
+              <template #default>
+                <p style="margin: var(--space-2) 0;">登录后可一次上传最多 10 张图片进行批量识别。</p>
+                <el-button type="primary" size="small" round @click="handleShowLogin">立即登录</el-button>
+              </template>
+            </el-alert>
+
+            <div v-else>
+              <el-upload
+                class="upload-area"
+                drag
+                multiple
+                :auto-upload="false"
+                :on-change="handleBatchFileChange"
+                :file-list="batchFiles"
+                accept="image/*"
+              >
+                <div class="upload-inner">
+                  <el-icon class="upload-icon"><UploadFilled /></el-icon>
+                  <p class="upload-text">将图片拖到此处，或<em>点击上传</em></p>
+                  <p class="upload-hint">最多上传 10 张图片</p>
+                </div>
+              </el-upload>
+
+              <el-button
+                v-if="batchFiles.length > 0"
+                type="primary"
+                round
+                @click="handleBatchPredict"
+                :loading="batchPredicting"
+                style="margin-top: var(--space-5);"
+              >
+                批量识别（{{ batchFiles.length }} 张）
               </el-button>
-            </template>
-          </el-alert>
 
-          <div v-else>
-            <el-upload
-              class="upload-demo"
-              drag
-              multiple
-              :auto-upload="false"
-              :on-change="handleBatchFileChange"
-              :file-list="batchFiles"
-              accept="image/*"
-            >
-              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-              <div class="el-upload__text">
-                将图片拖到此处，或<em>点击上传</em><br>
-                <span style="font-size: 12px; color: #999;">最多上传10张图片</span>
+              <div v-if="batchResults.length > 0" class="batch-results">
+                <h3>识别结果</h3>
+                <el-table :data="batchResults" stripe>
+                  <el-table-column prop="predicted_class" label="分类" />
+                  <el-table-column prop="confidence" label="置信度">
+                    <template #default="scope">{{ scope.row.confidence }}%</template>
+                  </el-table-column>
+                  <el-table-column prop="created_at" label="时间" />
+                </el-table>
               </div>
-            </el-upload>
-
-            <el-button
-              v-if="batchFiles.length > 0"
-              type="primary"
-              @click="handleBatchPredict"
-              :loading="batchPredicting"
-              style="margin-top: 20px;"
-            >
-              批量识别（{{ batchFiles.length }}张）
-            </el-button>
-
-            <div v-if="batchResults.length > 0" class="batch-results">
-              <h3>识别结果</h3>
-              <el-table :data="batchResults" style="width: 100%">
-                <el-table-column prop="predicted_class" label="分类" />
-                <el-table-column prop="confidence" label="置信度">
-                  <template #default="scope">
-                    {{ scope.row.confidence }}%
-                  </template>
-                </el-table-column>
-                <el-table-column prop="created_at" label="识别时间" />
-              </el-table>
             </div>
           </div>
         </el-tab-pane>
       </el-tabs>
-    </el-card>
+    </div>
 
     <!-- 反馈对话框 -->
-    <el-dialog
-      v-model="showFeedbackDialog"
-      title="提交识别反馈"
-      width="500px"
-    >
-      <el-form :model="feedbackForm" label-width="100px">
+    <el-dialog v-model="showFeedbackDialog" title="提交识别反馈" width="460px" :close-on-click-modal="false">
+      <el-form :model="feedbackForm" label-width="80px">
         <el-form-item label="识别结果">
           <el-input v-model="feedbackForm.predicted_class" disabled />
         </el-form-item>
         <el-form-item label="正确分类" required>
-          <el-input
-            v-model="feedbackForm.correct_class"
-            placeholder="请输入正确的垃圾分类"
-          />
+          <el-input v-model="feedbackForm.correct_class" placeholder="请输入正确的垃圾分类" />
         </el-form-item>
-        <el-form-item label="备注说明">
-          <el-input
-            v-model="feedbackForm.comment"
-            type="textarea"
-            :rows="4"
-            placeholder="请描述识别错误的情况（可选）"
-          />
+        <el-form-item label="备注">
+          <el-input v-model="feedbackForm.comment" type="textarea" :rows="3" placeholder="描述识别错误情况（可选）" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showFeedbackDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmitFeedback" :loading="submittingFeedback">
-          提交反馈
-        </el-button>
+        <el-button round @click="showFeedbackDialog = false">取消</el-button>
+        <el-button type="primary" round @click="handleSubmitFeedback" :loading="submittingFeedback">提交反馈</el-button>
       </template>
     </el-dialog>
   </div>
@@ -255,19 +217,16 @@ const currentFile = ref(null)
 const predicting = ref(false)
 const result = ref(null)
 
-// 摄像头识别相关
 const cameraActive = ref(false)
 const videoElement = ref(null)
 const canvasElement = ref(null)
 const mediaStream = ref(null)
 const cameraResult = ref(null)
 
-// 批量识别相关
 const batchFiles = ref([])
 const batchPredicting = ref(false)
 const batchResults = ref([])
 
-// 反馈相关
 const showFeedbackDialog = ref(false)
 const submittingFeedback = ref(false)
 const feedbackForm = ref({
@@ -277,25 +236,18 @@ const feedbackForm = ref({
   comment: ''
 })
 
-// 处理文件选择
 const handleFileChange = (file) => {
   currentFile.value = file.raw
   previewImage.value = URL.createObjectURL(file.raw)
   result.value = null
 }
 
-// 处理识别
 const handlePredict = async () => {
-  if (!currentFile.value) {
-    ElMessage.warning('请先选择图片')
-    return
-  }
-
+  if (!currentFile.value) { ElMessage.warning('请先选择图片'); return }
   predicting.value = true
   try {
     const formData = new FormData()
     formData.append('file', currentFile.value)
-
     result.value = await predictSingle(formData)
     ElMessage.success('识别成功')
   } catch (error) {
@@ -305,7 +257,6 @@ const handlePredict = async () => {
   }
 }
 
-// 处理批量文件选择
 const handleBatchFileChange = (file, fileList) => {
   if (fileList.length > 10) {
     ElMessage.warning('最多上传10张图片')
@@ -315,20 +266,12 @@ const handleBatchFileChange = (file, fileList) => {
   }
 }
 
-// 处理批量识别
 const handleBatchPredict = async () => {
-  if (batchFiles.value.length === 0) {
-    ElMessage.warning('请先选择图片')
-    return
-  }
-
+  if (batchFiles.value.length === 0) { ElMessage.warning('请先选择图片'); return }
   batchPredicting.value = true
   try {
     const formData = new FormData()
-    batchFiles.value.forEach(file => {
-      formData.append('files', file.raw)
-    })
-
+    batchFiles.value.forEach(file => formData.append('files', file.raw))
     batchResults.value = await predictBatch(formData)
     ElMessage.success(`成功识别 ${batchResults.value.length} 张图片`)
   } catch (error) {
@@ -338,36 +281,22 @@ const handleBatchPredict = async () => {
   }
 }
 
-// 启动摄像头
 const startCamera = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment', // 优先使用后置摄像头
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     })
-
     mediaStream.value = stream
     cameraActive.value = true
     cameraResult.value = null
-
-    // 等待 DOM 更新
     await new Promise(resolve => setTimeout(resolve, 100))
-
-    if (videoElement.value) {
-      videoElement.value.srcObject = stream
-    }
-
+    if (videoElement.value) videoElement.value.srcObject = stream
     ElMessage.success('摄像头已启动')
   } catch (error) {
-    console.error('启动摄像头失败:', error)
     ElMessage.error('无法访问摄像头，请检查权限设置')
   }
 }
 
-// 关闭摄像头
 const stopCamera = () => {
   if (mediaStream.value) {
     mediaStream.value.getTracks().forEach(track => track.stop())
@@ -377,54 +306,31 @@ const stopCamera = () => {
   cameraResult.value = null
 }
 
-// 拍照并识别
 const capturePhoto = async () => {
-  if (!videoElement.value || !canvasElement.value) {
-    ElMessage.error('摄像头未就绪')
-    return
-  }
-
+  if (!videoElement.value || !canvasElement.value) { ElMessage.error('摄像头未就绪'); return }
   predicting.value = true
   cameraResult.value = null
-
   try {
-    // 获取视频尺寸
     const video = videoElement.value
     const canvas = canvasElement.value
-
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
-
-    // 绘制当前帧到 canvas
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // 将 canvas 转换为 Blob
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95))
-
-    // 创建 File 对象
     const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' })
-
-    // 上传识别
     const formData = new FormData()
     formData.append('file', file)
-
     cameraResult.value = await predictSingle(formData)
     ElMessage.success('识别成功')
   } catch (error) {
-    console.error('拍照识别失败:', error)
     ElMessage.error('识别失败，请重试')
   } finally {
     predicting.value = false
   }
 }
 
-// 组件卸载时关闭摄像头
-onUnmounted(() => {
-  stopCamera()
-})
+onUnmounted(() => stopCamera())
 
-// 显示反馈对话框
 const handleShowFeedback = (predictionResult) => {
   feedbackForm.value = {
     prediction_id: predictionResult.id,
@@ -435,13 +341,8 @@ const handleShowFeedback = (predictionResult) => {
   showFeedbackDialog.value = true
 }
 
-// 提交反馈
 const handleSubmitFeedback = async () => {
-  if (!feedbackForm.value.correct_class) {
-    ElMessage.warning('请输入正确的分类')
-    return
-  }
-
+  if (!feedbackForm.value.correct_class) { ElMessage.warning('请输入正确的分类'); return }
   submittingFeedback.value = true
   try {
     await submitFeedback({
@@ -449,94 +350,254 @@ const handleSubmitFeedback = async () => {
       correct_class: feedbackForm.value.correct_class,
       comment: feedbackForm.value.comment
     })
-    ElMessage.success('感谢您的反馈！这将帮助我们改进识别准确度')
+    ElMessage.success('感谢您的反馈！')
     showFeedbackDialog.value = false
   } catch (error) {
-    if (error.response?.data?.detail) {
-      ElMessage.error(error.response.data.detail)
-    } else {
-      ElMessage.error('提交反馈失败，请重试')
-    }
+    ElMessage.error(error.response?.data?.detail || '提交反馈失败')
   } finally {
     submittingFeedback.value = false
   }
 }
 
-// 显示登录对话框
-const handleShowLogin = () => {
-  ElMessage.info('请点击右上角的"登录"按钮进行登录')
-}
+const handleShowLogin = () => ElMessage.info('请点击右上角"登录"按钮')
 
-// 获取当前模型信息
 const fetchCurrentModel = async () => {
   try {
     const response = await axios.get('/api/model/current')
     currentModel.value = response.data.model_file || ''
-  } catch (error) {
-    console.error('获取当前模型信息失败:', error)
-  }
+  } catch (error) { /* ignore */ }
 }
 
-// 页面加载时获取当前模型信息
-onMounted(() => {
-  fetchCurrentModel()
-})
+onMounted(() => fetchCurrentModel())
 </script>
 
 <style scoped>
-.classify {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px;
+.classify-page {
+  padding: var(--space-8) var(--space-6);
+  max-width: 860px;
 }
 
-.preview-section {
-  margin-top: 20px;
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.classify-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-content {
+  padding-top: var(--space-4);
+}
+
+/* Upload Area */
+.upload-area :deep(.el-upload-dragger) {
+  border-radius: var(--radius-xl) !important;
+  padding: var(--space-10) var(--space-6) !important;
+}
+
+.upload-inner {
   text-align: center;
 }
 
-.preview-section img {
-  max-width: 400px;
-  max-height: 400px;
-  margin-bottom: 20px;
-  border-radius: 8px;
+.upload-icon {
+  font-size: 48px;
+  color: var(--color-primary-light);
+  margin-bottom: var(--space-3);
 }
 
-.result-section {
-  margin-top: 30px;
+.upload-text {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
 }
 
-.result-details h3 {
-  font-size: 24px;
-  color: #409eff;
-  margin-bottom: 10px;
+.upload-text em {
+  color: var(--color-primary);
+  font-style: normal;
+  font-weight: var(--font-medium);
 }
 
-.batch-results {
-  margin-top: 30px;
+.upload-hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: var(--space-2);
 }
 
-/* 摄像头相关样式 */
-.camera-section {
+/* Preview */
+.preview-area {
+  text-align: center;
+  margin-top: var(--space-6);
+}
+
+.preview-area img {
+  max-width: 360px;
+  max-height: 360px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--space-5);
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Result Card */
+.result-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.result-header h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.confidence {
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  font-weight: var(--font-medium);
+}
+
+/* Top 3 */
+.top3-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.top3-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.top3-rank {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--text-tertiary);
+  min-width: 28px;
+}
+
+.top3-name {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  min-width: 120px;
+  font-weight: var(--font-medium);
+}
+
+.top3-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--border-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.top3-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+.top3-pct {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  min-width: 50px;
+  text-align: right;
+}
+
+.result-actions {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-secondary);
+}
+
+.hint-text {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* Camera */
+.camera-content {
   text-align: center;
 }
 
-.camera-start {
-  padding: 60px 20px;
+.camera-placeholder {
+  padding: var(--space-12) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
 }
 
-.camera-active video {
+.camera-placeholder p {
+  color: var(--text-tertiary);
+  font-size: var(--text-md);
+}
+
+.camera-live video {
   width: 100%;
-  max-width: 640px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
 }
 
 .camera-controls {
-  margin-top: 20px;
+  margin-top: var(--space-5);
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   justify-content: center;
+}
+
+/* Batch */
+.batch-results {
+  margin-top: var(--space-6);
+}
+
+.batch-results h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .classify-page {
+    padding: var(--space-4);
+  }
+  .classify-card {
+    padding: var(--space-4);
+  }
+  .top3-name {
+    min-width: 80px;
+  }
+  .preview-area img {
+    max-width: 100%;
+  }
 }
 </style>
