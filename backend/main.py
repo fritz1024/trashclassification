@@ -4,11 +4,11 @@ FastAPI主应用入口
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.core.config import settings
+from app.core.config import settings as config_settings
 from app.core.database import engine
 from app.core.logger import logger
 from app.models.database import Base
-from app.api import auth, predict, stats, admin, chat, reports, model, announcements
+from app.api import auth, predict, stats, admin, chat, reports, model, announcements, settings
 import os
 import time
 
@@ -17,8 +17,8 @@ Base.metadata.create_all(bind=engine)
 
 # 创建FastAPI应用
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
+    title=config_settings.APP_NAME,
+    version=config_settings.APP_VERSION,
     description="基于MobileNetV2的智能垃圾分类识别系统"
 )
 
@@ -54,18 +54,18 @@ async def log_requests(request: Request, call_next):
 # 配置CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=config_settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # 确保上传目录存在
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-logger.info(f"上传目录已创建: {settings.UPLOAD_DIR}")
+os.makedirs(config_settings.UPLOAD_DIR, exist_ok=True)
+logger.info(f"上传目录已创建: {config_settings.UPLOAD_DIR}")
 
 # 挂载静态文件目录（用于访问上传的图片）
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+app.mount("/uploads", StaticFiles(directory=config_settings.UPLOAD_DIR), name="uploads")
 
 # 注册路由
 app.include_router(auth.router)
@@ -76,6 +76,7 @@ app.include_router(chat.router)
 app.include_router(reports.router)
 app.include_router(model.router)
 app.include_router(announcements.router)
+app.include_router(settings.router)
 logger.info("所有路由已注册")
 
 
@@ -83,10 +84,10 @@ logger.info("所有路由已注册")
 async def startup_event():
     """应用启动事件"""
     logger.info("=" * 50)
-    logger.info(f"{settings.APP_NAME} v{settings.APP_VERSION} 启动中...")
-    logger.info(f"调试模式: {settings.DEBUG}")
-    logger.info(f"数据库: {settings.DATABASE_URL}")
-    logger.info(f"模型路径: {settings.MODEL_PATH}")
+    logger.info(f"{config_settings.APP_NAME} v{config_settings.APP_VERSION} 启动中...")
+    logger.info(f"调试模式: {config_settings.DEBUG}")
+    logger.info(f"数据库: {config_settings.DATABASE_URL}")
+    logger.info(f"模型路径: {config_settings.MODEL_PATH}")
     logger.info("=" * 50)
 
 
@@ -94,7 +95,7 @@ async def startup_event():
 async def shutdown_event():
     """应用关闭事件"""
     logger.info("=" * 50)
-    logger.info(f"{settings.APP_NAME} 正在关闭...")
+    logger.info(f"{config_settings.APP_NAME} 正在关闭...")
     logger.info("=" * 50)
 
 
@@ -103,7 +104,7 @@ def root():
     """根路径"""
     return {
         "message": "欢迎使用垃圾分类识别系统API",
-        "version": settings.APP_VERSION,
+        "version": config_settings.APP_VERSION,
         "docs": "/docs"
     }
 

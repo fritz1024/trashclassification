@@ -84,6 +84,12 @@ const routes = [
     name: 'AdminAnnouncements',
     component: () => import('@/views/admin/Announcements.vue'),
     meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/settings',
+    name: 'AdminSettings',
+    component: () => import('@/views/admin/Settings.vue'),
+    meta: { requiresAdmin: true }
   }
 ]
 

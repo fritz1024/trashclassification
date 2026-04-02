@@ -27,6 +27,7 @@
               <el-menu-item index="/admin/feedbacks">反馈管理</el-menu-item>
               <el-menu-item index="/admin/model">模型管理</el-menu-item>
               <el-menu-item index="/admin/announcements">公告管理</el-menu-item>
+              <el-menu-item index="/admin/settings">系统设置</el-menu-item>
             </el-sub-menu>
           </el-menu>
           <div class="user-actions">
