@@ -47,7 +47,7 @@
           class="admin-table"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column label="#" width="70">
+          <el-table-column label="序号" width="70">
             <template #default="scope">
               {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
             </template>

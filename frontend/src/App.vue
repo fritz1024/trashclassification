@@ -17,7 +17,7 @@
           <router-link to="/classify" class="nav-link" :class="{ active: route.path === '/classify' }">智能识别</router-link>
           <router-link to="/ai-chat" class="nav-link" :class="{ active: route.path === '/ai-chat' }">AI 助手</router-link>
           <router-link to="/user/profile" class="nav-link" :class="{ active: route.path.startsWith('/user') }" v-if="userStore.isLoggedIn">个人中心</router-link>
-          <router-link to="/admin/dashboard" class="nav-link" :class="{ active: route.path.startsWith('/admin') }" v-if="userStore.isLoggedIn && userStore.user?.role === 'admin'">管理后台</router-link>
+          <router-link to="/admin/dashboard" class="nav-link" :class="{ active: route.path.startsWith('/admin') }" v-if="userStore.isLoggedIn && ['admin', 'super_admin'].includes(userStore.user?.role)">管理后台</router-link>
         </nav>
 
         <!-- Right Actions -->
@@ -77,7 +77,7 @@
           <router-link to="/classify" class="mobile-nav-link" @click="mobileMenuOpen = false">智能识别</router-link>
           <router-link to="/ai-chat" class="mobile-nav-link" @click="mobileMenuOpen = false">AI 助手</router-link>
           <router-link to="/user/profile" class="mobile-nav-link" @click="mobileMenuOpen = false" v-if="userStore.isLoggedIn">个人中心</router-link>
-          <template v-if="userStore.isLoggedIn && userStore.user?.role === 'admin'">
+          <template v-if="userStore.isLoggedIn && ['admin', 'super_admin'].includes(userStore.user?.role)">
             <div class="mobile-nav-divider"></div>
             <span class="mobile-nav-label">管理后台</span>
             <router-link to="/admin/dashboard" class="mobile-nav-link" @click="mobileMenuOpen = false">数据概览</router-link>

@@ -16,10 +16,22 @@ def init_db():
     db = SessionLocal()
 
     try:
-        # 检查是否已有管理员
+        # 创建超级管理员账号
+        superadmin = db.query(User).filter(User.username == "superadmin").first()
+        if not superadmin:
+            superadmin = User(
+                username="superadmin",
+                email="superadmin@example.com",
+                password_hash=get_password_hash("123456"),
+                role="super_admin",
+                is_active=True
+            )
+            db.add(superadmin)
+            print("✓ 创建超级管理员账号: superadmin / 123456")
+
+        # 创建普通管理员账号
         admin = db.query(User).filter(User.username == "admin").first()
         if not admin:
-            # 创建默认管理员账号
             admin = User(
                 username="admin",
                 email="admin@example.com",
@@ -28,7 +40,8 @@ def init_db():
                 is_active=True
             )
             db.add(admin)
-            print("✓ 创建默认管理员账号: admin / 123456")
+            print("✓ 创建普通管理员账号: admin / 123456")
+
         db.commit()
         print("\n数据库初始化完成！")
 

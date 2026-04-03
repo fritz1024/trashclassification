@@ -156,7 +156,6 @@ const formatDate = (dateStr) => {
 </script>
 
 <style scoped>
-.security-page { max-width: 640px; }
 .page-header { margin-bottom: var(--space-6); }
 .page-header h1 { font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--text-primary); }
 

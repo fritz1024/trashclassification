@@ -22,6 +22,13 @@ export const updateUserStatus = (userId, isActive) => {
   })
 }
 
+// 更新用户角色（超级管理员）
+export const updateUserRole = (userId, role) => {
+  return request.put(`/admin/users/${userId}/role`, null, {
+    params: { role }
+  })
+}
+
 // 删除用户（管理员）
 export const deleteUser = (userId) => {
   return request.delete(`/admin/users/${userId}`)
@@ -40,9 +47,12 @@ export const getAllFeedbacks = (params) => {
 }
 
 // 更新反馈状态（管理员）
-export const updateFeedbackStatus = (feedbackId, status) => {
+export const updateFeedbackStatus = (feedbackId, processResult, processComment) => {
   return request.put(`/admin/feedbacks/${feedbackId}`, null, {
-    params: { status_value: status }
+    params: {
+      process_result: processResult,
+      process_comment: processComment
+    }
   })
 }
 

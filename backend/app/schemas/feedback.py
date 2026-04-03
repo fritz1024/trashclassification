@@ -21,6 +21,10 @@ class FeedbackResponse(BaseModel):
     correct_class: str
     comment: Optional[str] = None
     status: str
+    process_result: Optional[str] = None
+    process_comment: Optional[str] = None
+    processed_by: Optional[int] = None
+    processed_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:

@@ -3,8 +3,7 @@
 """
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
-from typing import List, Dict
+from typing import List, Dict, Optional
 from app.core.logger import logger
 import os
 
@@ -20,32 +19,46 @@ class VectorStore:
             persist_directory: 数据库持久化目录
         """
         self.persist_directory = persist_directory
-
-        # 创建持久化目录
-        os.makedirs(persist_directory, exist_ok=True)
-
-        # 初始化 ChromaDB 客户端
-        self.client = chromadb.Client(Settings(
-            persist_directory=persist_directory,
-            anonymized_telemetry=False
-        ))
-
-        # 初始化嵌入模型（使用中文模型）
-        logger.info("正在加载嵌入模型...")
-        self.embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-        logger.info("嵌入模型加载完成")
-
-        # 获取或创建集合
+        self._embedding_model = None
+        self._client = None
+        self._collection = None
         self.collection_name = "trash_classification_docs"
-        try:
-            self.collection = self.client.get_collection(name=self.collection_name)
-            logger.info(f"已加载现有集合: {self.collection_name}")
-        except:
-            self.collection = self.client.create_collection(
-                name=self.collection_name,
-                metadata={"description": "垃圾分类系统文档知识库"}
-            )
-            logger.info(f"已创建新集合: {self.collection_name}")
+
+    @property
+    def client(self):
+        """懒加载 ChromaDB 客户端"""
+        if self._client is None:
+            os.makedirs(self.persist_directory, exist_ok=True)
+            self._client = chromadb.Client(Settings(
+                persist_directory=self.persist_directory,
+                anonymized_telemetry=False
+            ))
+        return self._client
+
+    @property
+    def collection(self):
+        """懒加载集合"""
+        if self._collection is None:
+            try:
+                self._collection = self.client.get_collection(name=self.collection_name)
+                logger.info(f"已加载现有集合: {self.collection_name}")
+            except:
+                self._collection = self.client.create_collection(
+                    name=self.collection_name,
+                    metadata={"description": "垃圾分类系统文档知识库"}
+                )
+                logger.info(f"已创建新集合: {self.collection_name}")
+        return self._collection
+
+    @property
+    def embedding_model(self):
+        """懒加载嵌入模型"""
+        if self._embedding_model is None:
+            from sentence_transformers import SentenceTransformer
+            logger.info("正在加载嵌入模型...")
+            self._embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+            logger.info("嵌入模型加载完成")
+        return self._embedding_model
 
     def add_documents(self, documents: List[str], metadatas: List[Dict] = None, ids: List[str] = None):
         """
@@ -134,6 +147,75 @@ class VectorStore:
         try:
             return self.collection.count()
         except:
+            return 0
+
+    def add_document_chunks(self, doc_id: int, chunks: List[str], metadatas: List[Dict] = None):
+        """
+        添加文档分块到向量数据库
+
+        Args:
+            doc_id: 文档ID
+            chunks: 文档分块列表
+            metadatas: 分块元数据列表
+        """
+        try:
+            if metadatas is None:
+                metadatas = [{}] * len(chunks)
+
+            # 在每个metadata中添加doc_id
+            for metadata in metadatas:
+                metadata['doc_id'] = doc_id
+
+            # 生成唯一ID
+            ids = [f"doc_{doc_id}_chunk_{i}" for i in range(len(chunks))]
+
+            # 添加到向量库
+            self.add_documents(chunks, metadatas, ids)
+            logger.info(f"文档 {doc_id} 的 {len(chunks)} 个分块已添加到向量库")
+
+        except Exception as e:
+            logger.error(f"添加文档分块失败: {str(e)}", exc_info=True)
+            raise
+
+    def delete_document(self, doc_id: int):
+        """
+        删除指定文档的所有分块
+
+        Args:
+            doc_id: 文档ID
+        """
+        try:
+            # 查询该文档的所有分块
+            results = self.collection.get(where={"doc_id": doc_id})
+
+            if results['ids']:
+                # 删除所有分块
+                self.collection.delete(ids=results['ids'])
+                logger.info(f"已删除文档 {doc_id} 的 {len(results['ids'])} 个分块")
+                return len(results['ids'])
+            else:
+                logger.info(f"文档 {doc_id} 没有找到分块")
+                return 0
+
+        except Exception as e:
+            logger.error(f"删除文档分块失败: {str(e)}", exc_info=True)
+            raise
+
+    def get_document_chunk_count(self, doc_id: int) -> int:
+        """
+        获取指定文档的分块数量
+
+        Args:
+            doc_id: 文档ID
+
+        Returns:
+            分块数量
+        """
+        try:
+            results = self.collection.get(where={"doc_id": doc_id})
+            return len(results['ids']) if results['ids'] else 0
+        except Exception as e:
+            logger.error(f"获取文档分块数量失败: {str(e)}", exc_info=True)
             return 0
 
 

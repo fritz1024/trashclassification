@@ -21,8 +21,8 @@
         <div class="hero-info">
           <h2>{{ userStore.user?.username }}</h2>
           <div class="hero-meta">
-            <el-tag round :type="userStore.user?.role === 'admin' ? 'warning' : ''">
-              {{ userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}
+            <el-tag round :type="userStore.user?.role === 'super_admin' ? 'danger' : userStore.user?.role === 'admin' ? 'warning' : 'success'">
+              {{ userStore.user?.role === 'super_admin' ? '超级管理员' : userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}
             </el-tag>
             <span class="meta-text">注册于 {{ formatDate(userStore.user?.created_at) }}</span>
           </div>
@@ -77,8 +77,8 @@
               <el-icon><UserFilled /></el-icon> 角色
             </div>
             <div class="info-value">
-              <el-tag :type="userStore.user?.role === 'admin' ? 'warning' : 'success'" size="small">
-                {{ userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}
+              <el-tag :type="userStore.user?.role === 'super_admin' ? 'danger' : userStore.user?.role === 'admin' ? 'warning' : 'success'" size="small">
+                {{ userStore.user?.role === 'super_admin' ? '超级管理员' : userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}
               </el-tag>
             </div>
             <div class="info-action"></div>
@@ -209,10 +209,6 @@ const formatDate = (dateStr) => {
 </script>
 
 <style scoped>
-.profile-page {
-  max-width: 720px;
-}
-
 .page-header {
   margin-bottom: var(--space-6);
 }

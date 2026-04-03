@@ -4,7 +4,7 @@ import { login, register, getCurrentUser } from '@/api/auth'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
-  const user = ref(null)
+  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
 
   const isLoggedIn = computed(() => !!token.value)
 
@@ -14,6 +14,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = response.access_token
     user.value = response.user
     localStorage.setItem('token', response.access_token)
+    localStorage.setItem('user', JSON.stringify(response.user))
   }
 
   // 注册
@@ -26,6 +27,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     user.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
   }
 
   // 获取当前用户信息
@@ -33,6 +35,7 @@ export const useUserStore = defineStore('user', () => {
     if (token.value) {
       try {
         user.value = await getCurrentUser()
+        localStorage.setItem('user', JSON.stringify(user.value))
       } catch (error) {
         logout()
       }

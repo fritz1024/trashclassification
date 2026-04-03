@@ -8,8 +8,8 @@
         </div>
         <div class="sidebar-user" v-show="!sidebarCollapsed">
           <span class="sidebar-name">{{ userStore.user?.username || '用户' }}</span>
-          <el-tag size="small" round :type="userStore.user?.role === 'admin' ? 'warning' : ''">
-            {{ userStore.user?.role === 'admin' ? '管理员' : '用户' }}
+          <el-tag size="small" round :type="userStore.user?.role === 'super_admin' ? 'danger' : userStore.user?.role === 'admin' ? 'warning' : 'success'">
+            {{ userStore.user?.role === 'super_admin' ? '超级管理员' : userStore.user?.role === 'admin' ? '管理员' : '用户' }}
           </el-tag>
         </div>
       </div>
@@ -56,7 +56,7 @@
           <router-link to="/" class="header-nav-link">首页</router-link>
           <router-link to="/classify" class="header-nav-link">智能识别</router-link>
           <router-link to="/ai-chat" class="header-nav-link">AI 助手</router-link>
-          <router-link to="/admin/dashboard" class="header-nav-link" v-if="userStore.user?.role === 'admin'">管理后台</router-link>
+          <router-link to="/admin/dashboard" class="header-nav-link" v-if="['admin', 'super_admin'].includes(userStore.user?.role)">管理后台</router-link>
         </nav>
         <div class="header-right">
           <button class="theme-toggle" @click="themeStore.toggleTheme" :title="themeStore.isDark ? '切换亮色模式' : '切换暗色模式'">
@@ -117,6 +117,7 @@ const initial = computed(() => {
 const menuItems = [
   { path: '/user/profile', icon: 'User', label: '个人信息' },
   { path: '/user/history', icon: 'List', label: '识别历史' },
+  { path: '/user/feedbacks', icon: 'ChatDotRound', label: '我的反馈' },
   { path: '/user/stats', icon: 'DataAnalysis', label: '数据统计' },
   { path: '/user/security', icon: 'Lock', label: '账号安全' },
 ]

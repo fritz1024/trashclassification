@@ -1,52 +1,30 @@
 """
-知识相关的Pydantic模型
+知识库文档相关的Pydantic模型
 """
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 
-class KnowledgeCreate(BaseModel):
-    """创建知识模型（博文形式）"""
-    category: str
-    title: str
-    summary: Optional[str] = None
-    content: str  # 富文本内容
-    cover_image: Optional[str] = None
-    author: Optional[str] = "系统管理员"
-    is_published: Optional[bool] = True
-    examples: Optional[List[str]] = None  # 保留兼容
-    tips: Optional[str] = None  # 保留兼容
-
-
-class KnowledgeUpdate(BaseModel):
-    """更新知识模型"""
-    category: Optional[str] = None
-    title: Optional[str] = None
-    summary: Optional[str] = None
-    content: Optional[str] = None
-    cover_image: Optional[str] = None
-    author: Optional[str] = None
-    is_published: Optional[bool] = None
-    examples: Optional[List[str]] = None
-    tips: Optional[str] = None
-
-
-class KnowledgeResponse(BaseModel):
-    """知识响应模型"""
+class KnowledgeDocumentResponse(BaseModel):
+    """知识库文档响应模型"""
     id: int
-    category: str
-    title: str
-    summary: Optional[str] = None
-    content: str
-    cover_image: Optional[str] = None
-    author: str
-    view_count: int
-    is_published: bool
-    examples: Optional[List[str]] = None
-    tips: Optional[str] = None
+    filename: str
+    original_filename: str
+    file_path: str
+    file_size: int
+    file_type: str
+    status: str
+    uploaded_by: int
+    chunk_count: int
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class KnowledgeDocumentList(BaseModel):
+    """知识库文档列表响应"""
+    total: int
+    items: list[KnowledgeDocumentResponse]

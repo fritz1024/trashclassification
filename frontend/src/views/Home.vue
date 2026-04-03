@@ -34,12 +34,12 @@
         <h2>通知公告</h2>
       </div>
       <div class="announcement-list">
-        <div v-for="item in announcements" :key="item.id" class="announcement-card">
-          <el-tag :type="getTypeColor(item.type)" size="small" round>{{ getTypeName(item.type) }}</el-tag>
+        <div v-for="item in announcements" :key="item.id" class="announcement-card" @click="$router.push(`/announcements/${item.id}`)">
           <div class="announcement-body">
             <span class="announcement-title">{{ item.title }}</span>
-            <span class="announcement-text">{{ item.content }}</span>
+            <span class="announcement-time">{{ formatTime(item.created_at) }}</span>
           </div>
+          <el-icon><ArrowRight /></el-icon>
         </div>
       </div>
     </section>
@@ -112,8 +112,7 @@ const fetchAnnouncements = async () => {
   }
 }
 
-const getTypeColor = (type) => ({ info: '', warning: 'warning', success: 'success', error: 'danger' }[type] || '')
-const getTypeName = (type) => ({ info: '信息', warning: '警告', success: '成功', error: '错误' }[type] || type)
+const formatTime = (time) => new Date(time).toLocaleDateString('zh-CN')
 
 onMounted(() => fetchAnnouncements())
 </script>
@@ -241,16 +240,19 @@ onMounted(() => fetchAnnouncements())
 .announcement-card {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-4);
   background: var(--bg-elevated);
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-secondary);
   transition: all var(--transition-fast);
+  cursor: pointer;
 }
 
 .announcement-card:hover {
   box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
 }
 
 .announcement-body {
@@ -268,11 +270,9 @@ onMounted(() => fetchAnnouncements())
   white-space: nowrap;
 }
 
-.announcement-text {
+.announcement-time {
   color: var(--text-tertiary);
   font-size: var(--text-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

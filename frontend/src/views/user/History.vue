@@ -62,11 +62,13 @@
         </el-table>
 
         <div class="pagination-bar">
-          <span class="pagination-info">共 {{ total }} 条</span>
+          <span class="pagination-info">
+            第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
+          </span>
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50]"
+            :page-sizes="[10, 20, 50, 100]"
             :total="total"
             layout="sizes, prev, pager, next"
             @size-change="fetchHistory"
@@ -86,7 +88,7 @@
               <el-option label="其他垃圾" value="其他垃圾" />
             </el-select>
           </el-form-item>
-          <el-form-item label="备注"><el-input v-model="feedbackForm.comment" type="textarea" :rows="3" placeholder="描述错误情况（可选）" /></el-form-item>
+          <el-form-item label="反馈说明"><el-input v-model="feedbackForm.comment" type="textarea" :rows="3" placeholder="例如：这是纸巾，不是书（可选）" /></el-form-item>
         </el-form>
         <template #footer>
           <el-button round @click="showFeedbackDialog = false">取消</el-button>
@@ -200,7 +202,6 @@ watch(() => route.path, (p) => { if (p === '/user/history') fetchHistory() })
 </script>
 
 <style scoped>
-.history-page { max-width: 1100px; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-6); }
 .page-header h1 { font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--text-primary); }
 .header-actions { display: flex; gap: var(--space-3); }

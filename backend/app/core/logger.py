@@ -4,7 +4,7 @@
 import logging
 import sys
 from pathlib import Path
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 
 def setup_logger(name: str = "trash_classify", log_level: str = "INFO") -> logging.Logger:
@@ -42,27 +42,18 @@ def setup_logger(name: str = "trash_classify", log_level: str = "INFO") -> loggi
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # 文件处理器 - 所有日志
-    file_handler = RotatingFileHandler(
-        log_dir / "app.log",
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
+    # 文件处理器 - 按天轮转
+    file_handler = TimedRotatingFileHandler(
+        log_dir / "applicationlog.log",
+        when='midnight',
+        interval=1,
+        backupCount=30,
         encoding='utf-8'
     )
+    file_handler.suffix = "%Y-%m-%d"
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-
-    # 文件处理器 - 错误日志
-    error_handler = RotatingFileHandler(
-        log_dir / "error.log",
-        maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=5,
-        encoding='utf-8'
-    )
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(formatter)
-    logger.addHandler(error_handler)
 
     return logger
 

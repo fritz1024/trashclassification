@@ -18,18 +18,14 @@ class AnnouncementCreate(BaseModel):
     """创建公告请求模型"""
     title: str
     content: str
-    type: str = "info"
     is_published: bool = True
-    priority: int = 0
 
 
 class AnnouncementUpdate(BaseModel):
     """更新公告请求模型"""
     title: Optional[str] = None
     content: Optional[str] = None
-    type: Optional[str] = None
     is_published: Optional[bool] = None
-    priority: Optional[int] = None
 
 
 @router.get("/list")
@@ -46,11 +42,8 @@ def get_announcements(
         query = query.filter(Announcement.is_published == True)
     
     total = query.count()
-    announcements = query.order_by(
-        desc(Announcement.priority),
-        desc(Announcement.created_at)
-    ).offset(skip).limit(limit).all()
-    
+    announcements = query.order_by(desc(Announcement.id)).offset(skip).limit(limit).all()
+
     return {
         "total": total,
         "items": [
@@ -58,14 +51,33 @@ def get_announcements(
                 "id": a.id,
                 "title": a.title,
                 "content": a.content,
-                "type": a.type,
                 "is_published": a.is_published,
-                "priority": a.priority,
                 "created_at": a.created_at,
                 "updated_at": a.updated_at
             }
             for a in announcements
         ]
+    }
+
+
+@router.get("/{announcement_id}")
+def get_announcement(
+    announcement_id: int,
+    db: Session = Depends(get_db)
+):
+    """获取单个公告详情（公开接口）"""
+    announcement = db.query(Announcement).filter(Announcement.id == announcement_id).first()
+
+    if not announcement:
+        raise HTTPException(status_code=404, detail="公告不存在")
+
+    return {
+        "id": announcement.id,
+        "title": announcement.title,
+        "content": announcement.content,
+        "is_published": announcement.is_published,
+        "created_at": announcement.created_at,
+        "updated_at": announcement.updated_at
     }
 
 
@@ -79,9 +91,7 @@ def create_announcement(
     new_announcement = Announcement(
         title=announcement.title,
         content=announcement.content,
-        type=announcement.type,
-        is_published=announcement.is_published,
-        priority=announcement.priority
+        is_published=announcement.is_published
     )
     
     db.add(new_announcement)
@@ -111,12 +121,8 @@ def update_announcement(
         db_announcement.title = announcement.title
     if announcement.content is not None:
         db_announcement.content = announcement.content
-    if announcement.type is not None:
-        db_announcement.type = announcement.type
     if announcement.is_published is not None:
         db_announcement.is_published = announcement.is_published
-    if announcement.priority is not None:
-        db_announcement.priority = announcement.priority
     
     db_announcement.updated_at = datetime.now()
     db.commit()

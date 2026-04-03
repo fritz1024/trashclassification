@@ -1,7 +1,7 @@
 """
 图片识别相关API路由
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
@@ -266,6 +266,57 @@ def submit_feedback(
     db.refresh(feedback)
 
     return feedback
+
+
+@router.get("/feedbacks")
+def get_my_feedbacks(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取我的反馈列表（需要登录）"""
+    # 查询总数
+    total = db.query(Feedback).filter(Feedback.user_id == current_user.id).count()
+
+    feedbacks = (
+        db.query(Feedback)
+        .filter(Feedback.user_id == current_user.id)
+        .order_by(Feedback.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    # 为每条反馈添加识别记录详情
+    items = []
+    for feedback in feedbacks:
+        feedback_dict = {
+            "id": feedback.id,
+            "user_id": feedback.user_id,
+            "prediction_id": feedback.prediction_id,
+            "correct_class": feedback.correct_class,
+            "comment": feedback.comment,
+            "status": feedback.status,
+            "process_result": feedback.process_result,
+            "process_comment": feedback.process_comment,
+            "created_at": feedback.created_at,
+            "prediction_detail": None
+        }
+
+        # 添加识别记录详情
+        if feedback.prediction:
+            feedback_dict["prediction_detail"] = {
+                "id": feedback.prediction.id,
+                "image_path": feedback.prediction.image_path,
+                "predicted_class": feedback.prediction.predicted_class,
+                "confidence": feedback.prediction.confidence,
+                "created_at": feedback.prediction.created_at
+            }
+
+        items.append(feedback_dict)
+
+    return {"total": total, "items": items}
 
 
 @router.get("/export")

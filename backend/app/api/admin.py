@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.database import User, Prediction, Feedback
-from app.api.auth import require_admin
+from app.api.auth import require_admin, require_super_admin
 from app.schemas.prediction import PredictionListResponse
 from app.services.export_service import export_service
 import io
@@ -190,6 +190,40 @@ def update_user_status(
     return {"message": "状态更新成功"}
 
 
+@router.put("/users/{user_id}/role")
+def update_user_role(
+    user_id: int,
+    role: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_super_admin)
+):
+    """更新用户角色（超级管理员）"""
+    if role not in ["user", "admin", "super_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的角色"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="不能修改自己的角色"
+        )
+
+    user.role = role
+    db.commit()
+
+    return {"message": "角色更新成功"}
+
+
 @router.delete("/users/{user_id}")
 def delete_user(
     user_id: int,
@@ -319,13 +353,14 @@ def get_all_feedbacks(
 
 
 @router.put("/feedbacks/{feedback_id}")
-def update_feedback_status(
+def process_feedback(
     feedback_id: int,
-    status_value: str,
+    process_result: str,
+    process_comment: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-    """更新反馈状态（管理员）"""
+    """处理反馈（管理员）"""
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
 
     if not feedback:
@@ -334,13 +369,20 @@ def update_feedback_status(
             detail="反馈不存在"
         )
 
-    feedback.status = status_value
-    if status_value == "processed":
-        feedback.processed_at = datetime.now()
+    # 更新反馈状态
+    feedback.status = "processed"
+    feedback.process_result = process_result
+    feedback.process_comment = process_comment
+    feedback.processed_by = current_user.id
+    feedback.processed_at = datetime.now()
+
+    # 如果采纳反馈，更新原识别记录
+    if process_result == "adopted" and feedback.prediction:
+        feedback.prediction.is_correct = False
 
     db.commit()
 
-    return {"message": "状态更新成功"}
+    return {"message": "反馈处理成功"}
 
 
 @router.get("/predictions/export")

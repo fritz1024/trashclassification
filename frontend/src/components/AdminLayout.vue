@@ -96,14 +96,24 @@ const activeMenu = computed(() => route.path)
 const sidebarCollapsed = ref(false)
 const mobileOpen = ref(false)
 
-const menuItems = [
-  { path: '/admin/dashboard', icon: 'DataAnalysis', label: '数据概览' },
-  { path: '/admin/predictions', icon: 'Picture', label: '识别记录' },
-  { path: '/admin/users', icon: 'User', label: '用户管理' },
-  { path: '/admin/feedbacks', icon: 'ChatDotRound', label: '反馈管理' },
-  { path: '/admin/model', icon: 'Cpu', label: '模型管理' },
-  { path: '/admin/announcements', icon: 'Bell', label: '公告管理' },
-]
+const menuItems = computed(() => {
+  const items = [
+    { path: '/admin/dashboard', icon: 'DataAnalysis', label: '数据概览' },
+    { path: '/admin/predictions', icon: 'Picture', label: '识别记录' },
+    { path: '/admin/users', icon: 'User', label: '用户管理' },
+    { path: '/admin/feedbacks', icon: 'ChatDotRound', label: '反馈管理' },
+    { path: '/admin/model', icon: 'Cpu', label: '模型管理' },
+    { path: '/admin/announcements', icon: 'Bell', label: '公告管理' },
+    { path: '/admin/knowledge', icon: 'Reading', label: '知识库管理' },
+  ]
+
+  // 只有超级管理员才能看到模型训练
+  if (userStore.user?.role === 'super_admin') {
+    items.splice(5, 0, { path: '/admin/training', icon: 'Tools', label: '模型训练' })
+  }
+
+  return items
+})
 
 const backToUser = () => {
   router.push('/')

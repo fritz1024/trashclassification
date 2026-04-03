@@ -24,6 +24,16 @@ const routes = [
     name: 'AiChat',
     component: () => import('@/views/AiChat.vue')
   },
+  {
+    path: '/announcements',
+    name: 'Announcements',
+    component: () => import('@/views/Announcements.vue')
+  },
+  {
+    path: '/announcements/:id',
+    name: 'AnnouncementDetail',
+    component: () => import('@/views/AnnouncementDetail.vue')
+  },
 
   // 用户中心路由
   {
@@ -42,6 +52,12 @@ const routes = [
     path: '/user/stats',
     name: 'UserStats',
     component: () => import('@/views/user/Stats.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/feedbacks',
+    name: 'UserFeedbacks',
+    component: () => import('@/views/user/Feedbacks.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -105,6 +121,18 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
+    path: '/admin/knowledge',
+    name: 'AdminKnowledge',
+    component: () => import('@/views/admin/Knowledge.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/training',
+    name: 'AdminTraining',
+    component: () => import('@/views/admin/Training.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFound.vue')
@@ -120,7 +148,7 @@ router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
 
   if (to.meta.requiresAdmin) {
-    if (!userStore.isLoggedIn || userStore.user?.role !== 'admin') {
+    if (!userStore.isLoggedIn || !['admin', 'super_admin'].includes(userStore.user?.role)) {
       ElMessage.warning('需要管理员权限')
       next('/admin')
       return

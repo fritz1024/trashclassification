@@ -64,11 +64,13 @@
 
       <!-- Pagination -->
       <div class="pagination-bar">
-        <span class="pagination-info">共 {{ total }} 条</span>
+        <span class="pagination-info">
+          第 {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, total) }} 条，共 {{ total }} 条
+        </span>
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50]"
+          :page-sizes="[10, 20, 50, 100]"
           :total="total"
           layout="sizes, prev, pager, next"
           @size-change="fetchHistory"

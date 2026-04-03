@@ -123,7 +123,6 @@ watch(() => themeStore.isDark, () => { if (stats.value.total_predictions > 0) in
 </script>
 
 <style scoped>
-.stats-page { max-width: 1100px; }
 .page-header { margin-bottom: var(--space-6); }
 .page-header h1 { font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--text-primary); }
 .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-5); margin-bottom: var(--space-6); }

@@ -12,8 +12,8 @@
             <el-icon :size="32"><User /></el-icon>
           </div>
           <h2>{{ userStore.user?.username }}</h2>
-          <el-tag round :type="userStore.user?.role === 'admin' ? 'warning' : ''">
-            {{ userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}
+          <el-tag round :type="userStore.user?.role === 'super_admin' ? 'danger' : userStore.user?.role === 'admin' ? 'warning' : 'success'">
+            {{ userStore.user?.role === 'super_admin' ? '超级管理员' : userStore.user?.role === 'admin' ? '管理员' : '普通用户' }}
           </el-tag>
         </div>
 

@@ -39,7 +39,7 @@
           class="admin-table"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column label="#" width="70">
+          <el-table-column label="序号" width="70">
             <template #default="scope">
               {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
             </template>
@@ -134,6 +134,26 @@
         识别记录不存在或已被删除
       </div>
     </el-dialog>
+
+    <!-- 处理反馈对话框 -->
+    <el-dialog v-model="showProcessDialog" title="处理反馈" width="500px">
+      <el-form :model="processForm" label-width="80px">
+        <el-form-item label="处理结果">
+          <el-radio-group v-model="processForm.result">
+            <el-radio label="adopted">采纳</el-radio>
+            <el-radio label="rejected">拒绝</el-radio>
+            <el-radio label="invalid">无效</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="处理意见">
+          <el-input v-model="processForm.comment" type="textarea" :rows="4" placeholder="请输入处理意见（可选）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showProcessDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitProcess" :loading="processing">确定</el-button>
+      </template>
+    </el-dialog>
   </AdminLayout>
 </template>
 
@@ -155,6 +175,15 @@ const selectedIds = ref([])
 // 识别记录详情相关
 const showDetailDialog = ref(false)
 const currentPredictionDetail = ref(null)
+
+// 处理反馈相关
+const showProcessDialog = ref(false)
+const processing = ref(false)
+const currentFeedbackId = ref(null)
+const processForm = ref({
+  result: 'adopted',
+  comment: ''
+})
 
 const fetchFeedbacks = async () => {
   loading.value = true
@@ -187,30 +216,52 @@ const handleSelectionChange = (selection) => {
   selectedIds.value = selection.map(item => item.id)
 }
 
-const handleProcess = async (feedbackId) => {
+const handleProcess = (feedbackId) => {
+  currentFeedbackId.value = feedbackId
+  processForm.value = { result: 'adopted', comment: '' }
+  showProcessDialog.value = true
+}
+
+const submitProcess = async () => {
+  processing.value = true
   try {
-    await updateFeedbackStatus(feedbackId, 'processed')
-    ElMessage.success('已标记为已处理')
+    await updateFeedbackStatus(currentFeedbackId.value, processForm.value.result, processForm.value.comment)
+    ElMessage.success('反馈处理成功')
+    showProcessDialog.value = false
     fetchFeedbacks()
   } catch (error) {
-    ElMessage.error('操作失败')
+    ElMessage.error('处理失败')
+  } finally {
+    processing.value = false
   }
 }
 
 const handleBatchProcess = async () => {
+  if (selectedIds.value.length === 0) return
+
   try {
-    await ElMessageBox.confirm(
-      `确定要将选中的 ${selectedIds.value.length} 条反馈标记为已处理吗？`,
+    const { value: result } = await ElMessageBox.prompt(
+      `将对选中的 ${selectedIds.value.length} 条反馈应用相同的处理结果`,
       '批量处理',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
+        inputPlaceholder: '处理意见（可选）',
+        inputType: 'textarea',
+        beforeClose: async (action, instance, done) => {
+          if (action === 'confirm') {
+            const comment = instance.inputValue
+            const promises = selectedIds.value.map(id =>
+              updateFeedbackStatus(id, 'adopted', comment)
+            )
+            await Promise.all(promises)
+            done()
+          } else {
+            done()
+          }
+        }
       }
     )
-
-    const promises = selectedIds.value.map(id => updateFeedbackStatus(id, 'processed'))
-    await Promise.all(promises)
 
     ElMessage.success(`成功处理 ${selectedIds.value.length} 条反馈`)
     selectedIds.value = []

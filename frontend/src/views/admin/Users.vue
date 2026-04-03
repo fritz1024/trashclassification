@@ -37,6 +37,7 @@
           <div class="toolbar-right">
             <el-select v-model="roleFilter" placeholder="角色筛选" clearable style="width: 130px;" @change="handleFilterChange">
               <el-option label="全部" value="" />
+              <el-option label="超级管理员" value="super_admin" />
               <el-option label="管理员" value="admin" />
               <el-option label="普通用户" value="user" />
             </el-select>
@@ -58,17 +59,20 @@
           class="admin-table"
         >
           <el-table-column type="selection" width="55" />
-          <el-table-column label="#" width="70">
+          <el-table-column label="序号" width="70">
             <template #default="scope">
               {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
             </template>
           </el-table-column>
           <el-table-column prop="username" label="用户名" min-width="120" />
           <el-table-column prop="email" label="邮箱" min-width="180" />
-          <el-table-column prop="role" label="角色" width="100">
+          <el-table-column prop="role" label="角色" width="120">
             <template #default="scope">
-              <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'success'" size="small">
-                {{ scope.row.role === 'admin' ? '管理员' : '普通用户' }}
+              <el-tag
+                :type="scope.row.role === 'super_admin' ? 'danger' : scope.row.role === 'admin' ? 'warning' : 'success'"
+                size="small"
+              >
+                {{ scope.row.role === 'super_admin' ? '超级管理员' : scope.row.role === 'admin' ? '管理员' : '普通用户' }}
               </el-tag>
             </template>
           </el-table-column>
@@ -85,8 +89,17 @@
               {{ formatDateTime(scope.row.created_at) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="250" fixed="right">
+          <el-table-column label="操作" width="300" fixed="right">
             <template #default="scope">
+              <el-button
+                v-if="userStore.user?.role === 'super_admin'"
+                type="info"
+                size="small"
+                text
+                @click="handleChangeRole(scope.row)"
+              >
+                修改角色
+              </el-button>
               <el-button
                 :type="scope.row.is_active ? 'warning' : 'success'"
                 size="small"
@@ -132,16 +145,43 @@
         </div>
       </div>
     </div>
+
+    <!-- 修改角色对话框 -->
+    <el-dialog v-model="showRoleDialog" title="修改角色" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="用户">
+          <span>{{ selectedUser?.username }}</span>
+        </el-form-item>
+        <el-form-item label="当前角色">
+          <el-tag :type="selectedUser?.role === 'super_admin' ? 'danger' : selectedUser?.role === 'admin' ? 'warning' : 'success'" size="small">
+            {{ selectedUser?.role === 'super_admin' ? '超级管理员' : selectedUser?.role === 'admin' ? '管理员' : '普通用户' }}
+          </el-tag>
+        </el-form-item>
+        <el-form-item label="新角色">
+          <el-select v-model="newRole" placeholder="请选择角色" style="width: 100%;">
+            <el-option label="普通用户" value="user" />
+            <el-option label="管理员" value="admin" />
+            <el-option label="超级管理员" value="super_admin" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showRoleDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmChangeRole">确定</el-button>
+      </template>
+    </el-dialog>
   </AdminLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getAllUsers, updateUserStatus, deleteUser, resetUserPassword } from '@/api/admin'
+import { getAllUsers, updateUserStatus, updateUserRole, deleteUser, resetUserPassword } from '@/api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatDateTime } from '@/utils/date'
 import AdminLayout from '@/components/AdminLayout.vue'
+import { useUserStore } from '@/store/user'
 
+const userStore = useUserStore()
 const userList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
@@ -150,6 +190,11 @@ const total = ref(0)
 const selectedIds = ref([])
 const roleFilter = ref('')
 const statusFilter = ref('')
+
+// 修改角色对话框
+const showRoleDialog = ref(false)
+const selectedUser = ref(null)
+const newRole = ref('')
 
 const fetchUsers = async () => {
   loading.value = true
@@ -202,6 +247,32 @@ const handleToggleStatus = async (user) => {
     if (error !== 'cancel') {
       ElMessage.error(`${action}失败`)
     }
+  }
+}
+
+const handleChangeRole = (user) => {
+  if (user.role === 'super_admin') {
+    ElMessage.warning('不能修改超级管理员的角色')
+    return
+  }
+  selectedUser.value = user
+  newRole.value = user.role
+  showRoleDialog.value = true
+}
+
+const confirmChangeRole = async () => {
+  if (!newRole.value) {
+    ElMessage.warning('请选择角色')
+    return
+  }
+
+  try {
+    await updateUserRole(selectedUser.value.id, newRole.value)
+    ElMessage.success('角色修改成功')
+    showRoleDialog.value = false
+    fetchUsers()
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || '角色修改失败')
   }
 }
 
