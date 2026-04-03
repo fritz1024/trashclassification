@@ -4,12 +4,22 @@
       <div class="page-header">
         <h1>模型训练</h1>
         <div class="header-actions">
-          <el-button v-if="activeTab === 'datasets'" type="primary" @click="showCreateDatasetDialog = true">
-            从历史生成数据集
-          </el-button>
-          <el-button v-if="activeTab === 'jobs'" type="primary" @click="showCreateJobDialog = true">
-            创建训练任务
-          </el-button>
+          <template v-if="activeTab === 'datasets'">
+            <el-button type="danger" :disabled="selectedDatasetIds.length === 0" @click="handleBatchDeleteDatasets">
+              批量删除 ({{ selectedDatasetIds.length }})
+            </el-button>
+            <el-button type="primary" @click="showCreateDatasetDialog = true">
+              从历史生成数据集
+            </el-button>
+          </template>
+          <template v-if="activeTab === 'jobs'">
+            <el-button type="danger" :disabled="selectedJobIds.length === 0" @click="handleBatchDeleteJobs">
+              批量删除 ({{ selectedJobIds.length }})
+            </el-button>
+            <el-button type="primary" @click="showCreateJobDialog = true">
+              创建训练任务
+            </el-button>
+          </template>
         </div>
       </div>
 
@@ -17,7 +27,8 @@
         <el-tabs v-model="activeTab">
           <!-- 数据集管理 -->
           <el-tab-pane label="训练数据集" name="datasets">
-            <el-table :data="datasets" v-loading="datasetsLoading" stripe>
+            <el-table :data="datasets" v-loading="datasetsLoading" stripe @selection-change="handleDatasetSelectionChange">
+              <el-table-column type="selection" width="55" />
               <el-table-column label="序号" width="70">
                 <template #default="{ $index }">{{ (datasetPage - 1) * datasetPageSize + $index + 1 }}</template>
               </el-table-column>
@@ -71,7 +82,8 @@
               </div>
             </div>
 
-            <el-table :data="jobs" v-loading="jobsLoading" stripe>
+            <el-table :data="jobs" v-loading="jobsLoading" stripe @selection-change="handleJobSelectionChange">
+              <el-table-column type="selection" width="55" />
               <el-table-column label="序号" width="70">
                 <template #default="{ $index }">{{ (jobPage - 1) * jobPageSize + $index + 1 }}</template>
               </el-table-column>
@@ -213,6 +225,7 @@ const datasetsLoading = ref(false)
 const datasetPage = ref(1)
 const datasetPageSize = ref(20)
 const datasetTotal = ref(0)
+const selectedDatasetIds = ref([])
 const showCreateDatasetDialog = ref(false)
 const creatingDataset = ref(false)
 const datasetForm = ref({
@@ -230,6 +243,7 @@ const jobsLoading = ref(false)
 const jobPage = ref(1)
 const jobPageSize = ref(20)
 const jobTotal = ref(0)
+const selectedJobIds = ref([])
 const jobStatusFilter = ref('')
 const showCreateJobDialog = ref(false)
 const creatingJob = ref(false)
@@ -310,6 +324,10 @@ const handleViewDataset = async (dataset) => {
   }
 }
 
+const handleDatasetSelectionChange = (selection) => {
+  selectedDatasetIds.value = selection.map(item => item.id)
+}
+
 const handleDeleteDataset = async (id) => {
   try {
     await ElMessageBox.confirm('确定要删除这个数据集吗？', '提示', { type: 'warning' })
@@ -319,6 +337,21 @@ const handleDeleteDataset = async (id) => {
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(error.response?.data?.detail || '删除失败')
+    }
+  }
+}
+
+const handleBatchDeleteDatasets = async () => {
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedDatasetIds.value.length} 个数据集吗？`, '批量删除', { type: 'warning' })
+    const promises = selectedDatasetIds.value.map(id => deleteDataset(id))
+    await Promise.all(promises)
+    ElMessage.success(`成功删除 ${selectedDatasetIds.value.length} 个数据集`)
+    selectedDatasetIds.value = []
+    loadDatasets()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败')
     }
   }
 }
@@ -367,6 +400,10 @@ const handleCancelJob = async (id) => {
   }
 }
 
+const handleJobSelectionChange = (selection) => {
+  selectedJobIds.value = selection.map(item => item.id)
+}
+
 const handleDeleteJob = async (id) => {
   try {
     await ElMessageBox.confirm('确定要删除这个训练任务吗？', '提示', { type: 'warning' })
@@ -376,6 +413,21 @@ const handleDeleteJob = async (id) => {
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(error.response?.data?.detail || '删除失败')
+    }
+  }
+}
+
+const handleBatchDeleteJobs = async () => {
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedJobIds.value.length} 个训练任务吗？`, '批量删除', { type: 'warning' })
+    const promises = selectedJobIds.value.map(id => deleteTrainingJob(id))
+    await Promise.all(promises)
+    ElMessage.success(`成功删除 ${selectedJobIds.value.length} 个训练任务`)
+    selectedJobIds.value = []
+    loadJobs()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败')
     }
   }
 }
