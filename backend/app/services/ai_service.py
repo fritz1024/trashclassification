@@ -155,13 +155,16 @@ class AIService:
             reasoning_steps = []
 
             # 检查模型是否决定调用工具
-            if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
+            tool_calls = assistant_msg.get('tool_calls') if hasattr(assistant_msg, 'get') else getattr(assistant_msg, 'tool_calls', None)
+            
+            if tool_calls:
                 # 如果模型在调用工具前有输出思考过程
-                if getattr(assistant_msg, 'content', None):
-                    reasoning_steps.append(f"🧠 **思考**: {assistant_msg.content}")
+                content = assistant_msg.get('content') if hasattr(assistant_msg, 'get') else getattr(assistant_msg, 'content', None)
+                if content:
+                    reasoning_steps.append(f"🧠 **思考**: {content}")
 
                 # 遍历所有工具调用请求
-                for tool_call in assistant_msg.tool_calls:
+                for tool_call in tool_calls:
                     # Dashscope 返回的 tool_call 可能是 dict
                     if isinstance(tool_call, dict):
                         func_name = tool_call.get('function', {}).get('name', '')
