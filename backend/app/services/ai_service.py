@@ -44,23 +44,6 @@ TOOLS = [
                 "required": []
             }
         }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "search_knowledge_base",
-            "description": "从系统的向量知识库中检索特定的垃圾分类和环保知识。当用户询问专业分类标准、处理流程时调用。",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "需要检索的关键词或问题",
-                    }
-                },
-                "required": ["query"]
-            }
-        }
     }
 ]
 
@@ -132,24 +115,6 @@ class AIService:
         except Exception as e:
             logger.warning(f"向量数据库加载失败: {str(e)}")
 
-    def search_knowledge_base(self, query: str) -> str:
-        """从向量数据库检索（工具函数）"""
-        if not settings.ENABLE_RAG or self.vector_store is None:
-            return "知识库未开启或不可用。"
-            
-        try:
-            results = self.vector_store.search(query, n_results=3)
-            if not results:
-                return "在知识库中没有找到相关信息。"
-                
-            context_parts = []
-            for i, doc in enumerate(results, 1):
-                context_parts.append(f"片段 {i}:\n{doc['content']}")
-            return "\n\n".join(context_parts)
-        except Exception as e:
-            logger.error(f"检索知识库失败: {e}")
-            return "检索知识库时发生错误。"
-
     def chat(self, messages: List[Dict[str, str]], user_id: int = None) -> str:
         """
         调用通义千问API进行对话（集成 Function Calling）
@@ -163,11 +128,10 @@ class AIService:
         try:
             system_content = """你是一个专业的垃圾分类助手和平台向导，具有以下特点和限制：
 1. 你可以回答垃圾分类、环保、资源回收等问题。
-2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据或检索知识库。
+2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据，或利用联网功能检索最新知识。
 3. 当用户询问其个人的识别记录时，调用 get_user_prediction_history。
 4. 当用户询问系统整体的运行情况、用户量、识别总量时，调用 get_global_stats。
-5. 当用户询问复杂的分类标准或处理流程时，优先调用 search_knowledge_base 检索专业知识。
-6. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
+5. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
 """
             # 准备请求消息
             current_messages = [{"role": "system", "content": system_content}] + messages
@@ -177,7 +141,8 @@ class AIService:
                 model='qwen-plus', # qwen-turbo 对 tools 支持可能不稳定，建议用 plus
                 messages=current_messages,
                 tools=TOOLS,
-                result_format='message'
+                result_format='message',
+                enable_search=True
             )
 
             if response.status_code != 200:
@@ -215,9 +180,6 @@ class AIService:
                         tool_result = get_user_prediction_history(user_id, limit)
                     elif func_name == "get_global_stats":
                         tool_result = get_global_stats()
-                    elif func_name == "search_knowledge_base":
-                        query = func_args.get("query", "")
-                        tool_result = self.search_knowledge_base(query)
                     else:
                         tool_result = f"未知的工具: {func_name}"
 
@@ -240,7 +202,8 @@ class AIService:
                 second_response = Generation.call(
                     model='qwen-plus',
                     messages=current_messages,
-                    result_format='message'
+                    result_format='message',
+                    enable_search=True
                 )
                 
                 if second_response.status_code == 200:
