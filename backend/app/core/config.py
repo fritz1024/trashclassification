@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # 数据库配置
-    DATABASE_URL: str = "sqlite:///./trash_classify.db"
+    DATABASE_URL: str = "sqlite:///./db/trash_classify.db"
 
     # Redis配置
     REDIS_HOST: str = "localhost"
