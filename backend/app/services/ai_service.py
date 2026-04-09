@@ -153,7 +153,7 @@ class AIService:
             current_messages.append(assistant_msg)
 
             # 检查模型是否决定调用工具
-            if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
+            if assistant_msg.get('tool_calls'):
                 # 遍历所有工具调用请求
                 for tool_call in assistant_msg.tool_calls:
                     # Dashscope 返回的 tool_call 可能是 dict
