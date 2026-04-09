@@ -44,7 +44,10 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>AI 助手</span>
         </div>
-        <el-button text size="small" :icon="Delete" @click="clearCurrentChat">清空</el-button>
+        <div class="topbar-actions">
+          <el-switch v-model="showReasoning" active-text="显示思考过程" />
+          <el-button text size="small" :icon="Delete" @click="clearCurrentChat">清空</el-button>
+        </div>
       </div>
 
       <div class="chat-messages" ref="messagesContainer">
@@ -117,6 +120,7 @@ const loading = ref(false)
 const messagesContainer = ref(null)
 const currentChatId = ref(null)
 const chatHistory = ref([])
+const showReasoning = ref(true)
 
 const quickQuestions = ['塑料瓶属于什么垃圾？', '过期药品如何处理？', '厨余垃圾包括哪些？', '废旧电池是有害垃圾吗？', '纸巾是可回收物吗？', '如何正确分类快递包装？']
 
@@ -189,7 +193,7 @@ const sendMessage = async () => {
   scrollToBottom()
   loading.value = true
   try {
-    const response = await sendChatMessage(chat.messages)
+    const response = await sendChatMessage(chat.messages, showReasoning.value)
     if (response.success) {
       chat.messages.push({ role: 'assistant', content: response.reply })
       chat.updated_at = new Date()
@@ -390,6 +394,12 @@ watch(() => userStore.isLoggedIn, (n, o) => {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
 }
 
 .chat-messages {

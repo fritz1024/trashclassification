@@ -16,6 +16,7 @@
             <span>AI 助手</span>
           </div>
           <div class="cw-actions">
+            <el-switch v-model="showReasoning" size="small" style="margin-right: 8px; --el-switch-on-color: rgba(255,255,255,0.5); --el-switch-off-color: rgba(0,0,0,0.2)" />
             <button @click="clearChat" title="清空"><el-icon :size="16"><Delete /></el-icon></button>
             <button @click="toggleChat" title="关闭"><el-icon :size="16"><Close /></el-icon></button>
           </div>
@@ -68,6 +69,7 @@ const messages = ref([])
 const inputMessage = ref('')
 const loading = ref(false)
 const messagesContainer = ref(null)
+const showReasoning = ref(true)
 
 const toggleChat = () => { isOpen.value = !isOpen.value }
 const clearChat = () => { messages.value = []; ElMessage.success('对话已清空') }
@@ -81,7 +83,7 @@ const sendMessage = async () => {
   scrollToBottom()
   loading.value = true
   try {
-    const response = await sendChatMessage(messages.value)
+    const response = await sendChatMessage(messages.value, showReasoning.value)
     if (response.success) {
       messages.value.push({ role: 'assistant', content: response.reply })
       scrollToBottom()
@@ -169,6 +171,7 @@ onMounted(() => {})
 
 .cw-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-1);
 }
 

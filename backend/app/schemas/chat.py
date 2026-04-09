@@ -15,6 +15,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     """聊天请求模型"""
     messages: List[Message]  # 对话历史
+    show_reasoning: bool = True  # 是否显示AI的推理过程
 
 
 class ChatResponse(BaseModel):
