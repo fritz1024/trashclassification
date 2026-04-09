@@ -19,46 +19,30 @@ class VectorStore:
             persist_directory: 数据库持久化目录
         """
         self.persist_directory = persist_directory
-        self._embedding_model = None
-        self._client = None
-        self._collection = None
         self.collection_name = "trash_classification_docs"
-
-    @property
-    def client(self):
-        """懒加载 ChromaDB 客户端"""
-        if self._client is None:
-            os.makedirs(self.persist_directory, exist_ok=True)
-            self._client = chromadb.Client(Settings(
-                persist_directory=self.persist_directory,
-                anonymized_telemetry=False
-            ))
-        return self._client
-
-    @property
-    def collection(self):
-        """懒加载集合"""
-        if self._collection is None:
-            try:
-                self._collection = self.client.get_collection(name=self.collection_name)
-                logger.info(f"已加载现有集合: {self.collection_name}")
-            except:
-                self._collection = self.client.create_collection(
-                    name=self.collection_name,
-                    metadata={"description": "垃圾分类系统文档知识库"}
-                )
-                logger.info(f"已创建新集合: {self.collection_name}")
-        return self._collection
-
-    @property
-    def embedding_model(self):
-        """懒加载嵌入模型"""
-        if self._embedding_model is None:
-            from sentence_transformers import SentenceTransformer
-            logger.info("正在加载嵌入模型...")
-            self._embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-            logger.info("嵌入模型加载完成")
-        return self._embedding_model
+        
+        # 立即初始化组件
+        from sentence_transformers import SentenceTransformer
+        logger.info("正在初始化向量数据库和嵌入模型...")
+        
+        os.makedirs(self.persist_directory, exist_ok=True)
+        self.client = chromadb.Client(Settings(
+            persist_directory=self.persist_directory,
+            anonymized_telemetry=False
+        ))
+        
+        try:
+            self.collection = self.client.get_collection(name=self.collection_name)
+            logger.info(f"已加载现有集合: {self.collection_name}")
+        except:
+            self.collection = self.client.create_collection(
+                name=self.collection_name,
+                metadata={"description": "垃圾分类系统文档知识库"}
+            )
+            logger.info(f"已创建新集合: {self.collection_name}")
+            
+        self.embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+        logger.info("向量数据库和嵌入模型初始化完成")
 
     def add_documents(self, documents: List[str], metadatas: List[Dict] = None, ids: List[str] = None):
         """

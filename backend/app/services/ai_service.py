@@ -18,21 +18,14 @@ class AIService:
         else:
             logger.warning("未配置 DASHSCOPE_API_KEY，AI聊天功能将不可用")
 
-        # 延迟加载向量数据库（避免启动时加载模型）
-        self._vector_store = None
-
-    @property
-    def vector_store(self):
-        """懒加载向量数据库"""
-        if self._vector_store is None:
-            try:
-                from app.services.vector_store import vector_store
-                self._vector_store = vector_store
-                logger.info("向量数据库已加载")
-            except Exception as e:
-                logger.warning(f"向量数据库加载失败: {str(e)}")
-                self._vector_store = None
-        return self._vector_store
+        # 立即加载向量数据库
+        self.vector_store = None
+        try:
+            from app.services.vector_store import vector_store
+            self.vector_store = vector_store
+            logger.info("向量数据库已加载")
+        except Exception as e:
+            logger.warning(f"向量数据库加载失败: {str(e)}")
 
     def retrieve_context(self, query: str) -> str:
         """
