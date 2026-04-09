@@ -6,13 +6,15 @@ import request from '../utils/request'
 /**
  * 发送聊天消息
  * @param {Array} messages - 对话历史 [{role: 'user', content: '...'}, ...]
+ * @param {Boolean} showReasoning - 是否显示推理过程
  */
-export function sendMessage(messages) {
+export function sendMessage(messages, showReasoning = true) {
   return request({
     url: '/chat/',
     method: 'post',
     data: {
-      messages
+      messages,
+      show_reasoning: showReasoning
     }
   })
 }
