@@ -37,7 +37,11 @@ async def chat(
         logger.info(f"收到聊天请求，消息数量: {len(messages)}")
 
         # 调用AI服务 (传递 user_id 以便大模型查询用户历史)
-        reply = ai_service.chat(messages, user_id=current_user.id)
+        reply = ai_service.chat(
+            messages,
+            user_id=current_user.id,
+            show_reasoning=request.show_reasoning
+        )
 
         return ChatResponse(
             reply=reply,

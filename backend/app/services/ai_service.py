@@ -115,7 +115,7 @@ class AIService:
         except Exception as e:
             logger.warning(f"向量数据库加载失败: {str(e)}")
 
-    def chat(self, messages: List[Dict[str, str]], user_id: int = None) -> str:
+    def chat(self, messages: List[Dict[str, str]], user_id: int = None, show_reasoning: bool = True) -> str:
         """
         调用通义千问API进行对话（集成 Function Calling）
         
@@ -217,8 +217,11 @@ class AIService:
                 
                 if second_response.status_code == 200:
                     final_answer = second_response.output.choices[0].message.content
-                    reasoning_text = "\n".join([f"> {step}" for step in reasoning_steps])
-                    return f"{reasoning_text}\n\n**最终回答**:\n{final_answer}"
+                    if show_reasoning and reasoning_steps:
+                        reasoning_text = "\n".join([f"> {step}" for step in reasoning_steps])
+                        return f"{reasoning_text}\n\n**最终回答**:\n{final_answer}"
+                    else:
+                        return final_answer
                 else:
                     return f"基于工具结果生成回答时失败: {second_response.message}"
             

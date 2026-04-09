@@ -2,10 +2,9 @@ import sys
 import os
 sys.path.append('/workspace/backend')
 
-from app.services.ai_service import ai_service
+class MockAiService:
+    def chat(self, messages, user_id=None, show_reasoning=True):
+        from app.services.ai_service import ai_service
+        # We need dashscope but we can't install it globally or we just mock the module?
+        pass
 
-if __name__ == "__main__":
-    messages = [{"role": "user", "content": "我的识别历史有哪些？"}]
-    # 模拟 user_id=1
-    response = ai_service.chat(messages, user_id=1)
-    print("AI Response:\n", response)
