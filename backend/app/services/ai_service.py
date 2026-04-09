@@ -191,11 +191,20 @@ class AIService:
             if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
                 # 遍历所有工具调用请求
                 for tool_call in assistant_msg.tool_calls:
-                    func_name = tool_call.function.name
-                    try:
-                        func_args = json.loads(tool_call.function.arguments)
-                    except:
-                        func_args = {}
+                    # Dashscope 返回的 tool_call 可能是 dict
+                    if isinstance(tool_call, dict):
+                        func_name = tool_call.get('function', {}).get('name', '')
+                        try:
+                            func_args_str = tool_call.get('function', {}).get('arguments', '{}')
+                            func_args = json.loads(func_args_str)
+                        except:
+                            func_args = {}
+                    else:
+                        func_name = tool_call.function.name
+                        try:
+                            func_args = json.loads(tool_call.function.arguments)
+                        except:
+                            func_args = {}
                         
                     logger.info(f"Agent 决定调用工具: {func_name}, 参数: {func_args}")
                     
@@ -213,11 +222,19 @@ class AIService:
                         tool_result = f"未知的工具: {func_name}"
 
                     # 将工具的执行结果追加到消息列表中
-                    current_messages.append({
-                        "role": "tool",
-                        "name": func_name,
-                        "content": tool_result
-                    })
+                    # 在 dashscope 中如果使用 OpenAI 兼容模式或 dict，工具结果格式可能不同
+                    if isinstance(tool_call, dict):
+                        current_messages.append({
+                            "role": "tool",
+                            "name": func_name,
+                            "content": tool_result
+                        })
+                    else:
+                        current_messages.append({
+                            "role": "tool",
+                            "name": func_name,
+                            "content": tool_result
+                        })
                 
                 # 第二次调用大模型，让它基于工具的返回结果生成最终回答
                 second_response = Generation.call(
