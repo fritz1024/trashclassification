@@ -21,7 +21,10 @@ router = APIRouter(prefix="/api/chat", tags=["AI聊天"])
 
 
 @router.post("/", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     AI聊天接口
 
@@ -33,8 +36,8 @@ async def chat(request: ChatRequest):
 
         logger.info(f"收到聊天请求，消息数量: {len(messages)}")
 
-        # 调用AI服务
-        reply = ai_service.chat(messages)
+        # 调用AI服务 (传递 user_id 以便大模型查询用户历史)
+        reply = ai_service.chat(messages, user_id=current_user.id)
 
         return ChatResponse(
             reply=reply,
