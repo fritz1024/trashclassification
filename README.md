@@ -42,6 +42,7 @@ source venv/bin/activate  # Windows 用户使用 venv\Scripts\activate
 
 # 安装依赖
 pip install -r requirements.txt
+pip install chromadb sentence-transformers
 
 # 配置环境变量（可选，修改 .env 文件中的配置如 DASHSCOPE_API_KEY）
 cp .env.example .env
