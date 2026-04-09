@@ -155,7 +155,7 @@ class AIService:
             reasoning_steps = []
 
             # 检查模型是否决定调用工具
-            if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
+            if assistant_msg.get('tool_calls'):
                 # 如果模型在调用工具前有输出思考过程
                 if getattr(assistant_msg, 'content', None):
                     reasoning_steps.append(f"🧠 **思考**: {assistant_msg.content}")
