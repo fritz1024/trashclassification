@@ -89,7 +89,7 @@ const handleLogin = async () => {
   try {
     await userStore.login(loginForm.value)
 
-    if (userStore.user?.role !== 'admin') {
+    if (!['admin', 'super_admin'].includes(userStore.user?.role)) {
       ElMessage.error('需要管理员权限')
       userStore.logout()
       return
