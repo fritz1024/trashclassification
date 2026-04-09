@@ -152,8 +152,14 @@ class AIService:
             assistant_msg = response.output.choices[0].message
             current_messages.append(assistant_msg)
 
+            reasoning_steps = []
+
             # 检查模型是否决定调用工具
             if hasattr(assistant_msg, 'tool_calls') and assistant_msg.tool_calls:
+                # 如果模型在调用工具前有输出思考过程
+                if getattr(assistant_msg, 'content', None):
+                    reasoning_steps.append(f"🧠 **思考**: {assistant_msg.content}")
+
                 # 遍历所有工具调用请求
                 for tool_call in assistant_msg.tool_calls:
                     # Dashscope 返回的 tool_call 可能是 dict
@@ -172,6 +178,7 @@ class AIService:
                             func_args = {}
                         
                     logger.info(f"Agent 决定调用工具: {func_name}, 参数: {func_args}")
+                    reasoning_steps.append(f"🛠️ **行动 (Action)**: 调用工具 `{func_name}`，参数: `{func_args}`")
                     
                     # 执行对应的本地工具函数
                     tool_result = ""
@@ -182,6 +189,8 @@ class AIService:
                         tool_result = get_global_stats()
                     else:
                         tool_result = f"未知的工具: {func_name}"
+
+                    reasoning_steps.append(f"📄 **观察 (Observation)**: {tool_result}")
 
                     # 将工具的执行结果追加到消息列表中
                     # 在 dashscope 中如果使用 OpenAI 兼容模式或 dict，工具结果格式可能不同
@@ -207,7 +216,9 @@ class AIService:
                 )
                 
                 if second_response.status_code == 200:
-                    return second_response.output.choices[0].message.content
+                    final_answer = second_response.output.choices[0].message.content
+                    reasoning_text = "\n".join([f"> {step}" for step in reasoning_steps])
+                    return f"{reasoning_text}\n\n**最终回答**:\n{final_answer}"
                 else:
                     return f"基于工具结果生成回答时失败: {second_response.message}"
             
