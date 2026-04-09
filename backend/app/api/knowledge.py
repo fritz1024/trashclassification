@@ -1,18 +1,18 @@
 """
 知识库管理API路由
 """
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Body
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Query, Body
 from sqlalchemy.orm import Session
-from typing import Optional
+from sqlalchemy import desc
+from typing import Optional, List
 import os
 import time
 from app.core.database import get_db
-from app.api.auth import require_admin
 from app.models.database import User, KnowledgeDocument
 from app.schemas.knowledge import KnowledgeDocumentResponse, KnowledgeDocumentList
-from app.services.document_processor import process_uploaded_document
-from app.services.vector_store import vector_store
+from app.api.auth import require_admin
 from app.core.logger import logger
+from app.services.vector_store import vector_store
 
 router = APIRouter(prefix="/api/admin/knowledge", tags=["知识库管理"])
 
@@ -61,6 +61,7 @@ async def upload_document(
 
     # 处理文档
     try:
+        from app.services.document_processor import process_uploaded_document
         process_uploaded_document(db, doc.id, file_path)
     except Exception as e:
         logger.error(f"处理文档失败: {str(e)}")
@@ -138,6 +139,7 @@ def update_document(
         vector_store.delete_document(doc_id)
 
         # 重新处理
+        from app.services.document_processor import process_uploaded_document
         process_uploaded_document(db, doc_id, doc.file_path)
 
         db.refresh(doc)
