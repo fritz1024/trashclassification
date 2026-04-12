@@ -61,7 +61,7 @@
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
 import { ChatDotRound, Close, Delete, User, Promotion } from '@element-plus/icons-vue'
-import { sendMessage as sendChatMessage } from '../api/chat'
+import { sendMessage as sendChatMessage, sendMessageStream } from '@/api/chat'
 import { ElMessage } from 'element-plus'
 
 const isOpen = ref(false)
@@ -77,23 +77,45 @@ const scrollToBottom = () => { nextTick(() => { if (messagesContainer.value) mes
 
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || loading.value) return
-  const userMessage = inputMessage.value.trim()
+  const userMsg = inputMessage.value.trim()
+  messages.value.push({ role: 'user', content: userMsg })
   inputMessage.value = ''
-  messages.value.push({ role: 'user', content: userMessage })
-  scrollToBottom()
   loading.value = true
+  scrollToBottom()
+
+  const assistantMsgIndex = messages.value.length
+  messages.value.push({ role: 'assistant', content: '' })
+
+  let errorOccurred = false
+
   try {
-    const response = await sendChatMessage(messages.value, showReasoning.value)
-    if (response.success) {
-      messages.value.push({ role: 'assistant', content: response.reply })
-      scrollToBottom()
-    } else {
-      ElMessage.error(response.error || 'AI 服务暂时不可用')
+    const messagesToSend = messages.value.slice(0, assistantMsgIndex)
+
+    await sendMessageStream(
+      messagesToSend,
+      false, // Widget 中为了简洁，不显示思考过程
+      (chunk) => {
+        messages.value[assistantMsgIndex].content += chunk
+        scrollToBottom()
+      },
+      (error) => {
+        console.error('Stream error:', error)
+        errorOccurred = true
+        ElMessage.error(error.message || 'AI 服务暂时不可用')
+      }
+    )
+
+    if (errorOccurred) {
+      if (!messages.value[assistantMsgIndex].content) {
+        messages.value.pop()
+      }
     }
   } catch (error) {
     ElMessage.error('发送消息失败')
+    messages.value.pop()
   } finally {
     loading.value = false
+    scrollToBottom()
   }
 }
 

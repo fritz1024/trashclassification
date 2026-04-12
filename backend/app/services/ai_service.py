@@ -270,6 +270,143 @@ class AIService:
             logger.error(f"AI Agent 运行异常: {str(e)}", exc_info=True)
             return f"抱歉，处理您的请求时出现错误: {str(e)}"
 
+    def chat_stream(self, messages: List[Dict[str, str]], user_id: int = None, show_reasoning: bool = True):
+        """
+        调用通义千问API进行流式对话（集成 Function Calling）
+        
+        注意：此处采用混合模式，如果需要调用工具，工具链的执行是同步的，
+        在所有工具调用完成后，最后一次生成最终回答的请求使用流式输出。
+        """
+        if not settings.DASHSCOPE_API_KEY:
+            yield json.dumps({"type": "error", "content": "AI聊天功能未配置，请联系管理员添加 DASHSCOPE_API_KEY"}) + "\n"
+            return
+
+        try:
+            system_content = """你是一个专业的垃圾分类助手和平台向导，具有以下特点和限制：
+1. 你可以回答垃圾分类、环保、资源回收等问题。
+2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据，或利用联网功能检索最新知识。
+3. 当用户询问其个人的识别记录时，调用 get_user_prediction_history。
+4. 当用户询问系统整体的运行情况、用户量、识别总量时，调用 get_global_stats。
+5. 当用户询问'我是谁'、'我的信息'等个人资料时，调用 get_current_user_info。
+6. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
+"""
+            # 准备请求消息
+            current_messages = [{"role": "system", "content": system_content}] + messages
+
+            # 第一次调用大模型，附带 tools，这里保持非流式以方便解析 tool_calls
+            response = Generation.call(
+                model='qwen-plus',
+                messages=current_messages,
+                tools=TOOLS,
+                result_format='message',
+                enable_search=True
+            )
+
+            if response.status_code != 200:
+                logger.error(f"API调用失败: {response.code} - {response.message}")
+                yield json.dumps({"type": "error", "content": f"抱歉，AI服务暂时不可用。错误信息: {response.message}"}) + "\n"
+                return
+
+            assistant_msg = response.output.choices[0].message
+            current_messages.append(assistant_msg)
+
+            reasoning_steps = []
+
+            # 检查模型是否决定调用工具
+            if assistant_msg.get('tool_calls'):
+                if getattr(assistant_msg, 'content', None):
+                    reasoning_steps.append(f"🧠 **思考**: {assistant_msg.content}")
+
+                for tool_call in assistant_msg.tool_calls:
+                    if isinstance(tool_call, dict):
+                        func_name = tool_call.get('function', {}).get('name', '')
+                        try:
+                            func_args_str = tool_call.get('function', {}).get('arguments', '{}')
+                            func_args = json.loads(func_args_str)
+                        except:
+                            func_args = {}
+                    else:
+                        func_name = tool_call.function.name
+                        try:
+                            func_args = json.loads(tool_call.function.arguments)
+                        except:
+                            func_args = {}
+                        
+                        logger.info(f"Agent 决定调用工具: {func_name}, 参数: {func_args}")
+                    
+                    reasoning_steps.append(f"🛠️ **行动 (Action)**: 调用工具 `{func_name}`，参数: `{func_args}`")
+                    
+                    tool_result = ""
+                    if func_name == "get_user_prediction_history":
+                        limit = func_args.get("limit", 5)
+                        tool_result = get_user_prediction_history(user_id, limit)
+                    elif func_name == "get_global_stats":
+                        tool_result = get_global_stats()
+                    elif func_name == "get_current_user_info":
+                        tool_result = get_current_user_info(user_id)
+                    else:
+                        tool_result = f"未知的工具: {func_name}"
+
+                    reasoning_steps.append(f"📄 **观察 (Observation)**: {tool_result}")
+
+                    if isinstance(tool_call, dict):
+                        current_messages.append({
+                            "role": "tool",
+                            "name": func_name,
+                            "content": tool_result
+                        })
+                    else:
+                        current_messages.append({
+                            "role": "tool",
+                            "name": func_name,
+                            "content": tool_result
+                        })
+                
+                # 如果配置了显示思考过程，先将思考过程通过流发送给前端
+                if show_reasoning and reasoning_steps:
+                    reasoning_text = "\n".join([f"> {step}" for step in reasoning_steps])
+                    yield json.dumps({"type": "content", "content": f"{reasoning_text}\n\n**最终回答**:\n"}) + "\n"
+                
+                # 第二次调用大模型，开启流式输出
+                second_response_gen = Generation.call(
+                    model='qwen-plus',
+                    messages=current_messages,
+                    result_format='message',
+                    stream=True,
+                    incremental_output=True,
+                    enable_search=True
+                )
+                
+                for r in second_response_gen:
+                    if r.status_code == 200:
+                        chunk = r.output.choices[0].message.content
+                        if chunk:
+                            yield json.dumps({"type": "content", "content": chunk}) + "\n"
+                    else:
+                        yield json.dumps({"type": "error", "content": f"\n生成回答时失败: {r.message}"}) + "\n"
+                        break
+                return
+            
+            # 如果没有调用工具，直接基于当前消息发起流式请求
+            # 注意这里为了复用同一个接口流式，需要重新发起一个流式请求，
+            # 因为第一步为了检查 tool_calls 使用了非流式请求。
+            # 为了避免重复思考，我们可以直接把第一步的 content 拆分成块，或者重新调用。
+            # 但既然已经拿到了非流式的结果，直接 yield 回去也可以（虽然是一次性返回），
+            # 不过为了体现出打字机效果，我们可以将其直接模拟流式返回，或者干脆重新调一次。
+            # 最好的办法是：如果没有工具调用，直接返回已获取的 assistant_msg.content，前端也能处理。
+            if assistant_msg.content:
+                import time
+                chunk_size = 8
+                content = assistant_msg.content
+                for i in range(0, len(content), chunk_size):
+                    chunk = content[i:i+chunk_size]
+                    yield json.dumps({"type": "content", "content": chunk}) + "\n"
+                    time.sleep(0.02)
+
+        except Exception as e:
+            logger.error(f"AI Agent 运行异常: {str(e)}", exc_info=True)
+            yield json.dumps({"type": "error", "content": f"抱歉，处理您的请求时出现错误: {str(e)}"}) + "\n"
+
 
 # 创建全局AI服务实例
 ai_service = AIService()

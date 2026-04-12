@@ -108,7 +108,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
-import { sendMessage as sendChatMessage, getConversations, createConversation, updateConversation, deleteConversation as deleteConversationAPI } from '@/api/chat'
+import { sendMessage as sendChatMessage, sendMessageStream, getConversations, createConversation, updateConversation, deleteConversation as deleteConversationAPI } from '@/api/chat'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChatDotRound, Plus, Delete, User, Promotion, InfoFilled } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
@@ -192,19 +192,45 @@ const sendMessage = async () => {
   chat.updated_at = new Date()
   scrollToBottom()
   loading.value = true
+  
+  // 创建一个临时的助理消息占位，内容为空
+  const assistantMsgIndex = chat.messages.length
+  chat.messages.push({ role: 'assistant', content: '' })
+
+  let errorOccurred = false
+
   try {
-    const response = await sendChatMessage(chat.messages, showReasoning.value)
-    if (response.success) {
-      chat.messages.push({ role: 'assistant', content: response.reply })
+    const messagesToSend = chat.messages.slice(0, assistantMsgIndex)
+    
+    await sendMessageStream(
+      messagesToSend,
+      showReasoning.value,
+      (chunk) => {
+        chat.messages[assistantMsgIndex].content += chunk
+        scrollToBottom()
+      },
+      (error) => {
+        console.error('Stream error:', error)
+        errorOccurred = true
+        ElMessage.error(error.message || 'AI 服务暂时不可用')
+      }
+    )
+
+    if (!errorOccurred) {
       chat.updated_at = new Date()
-      scrollToBottom()
       await saveConversationToBackend(chat, isFirst)
     } else {
-      ElMessage.error(response.error || 'AI 服务暂时不可用')
+      // 如果出错，考虑移除或保留刚才的消息
+      if (!chat.messages[assistantMsgIndex].content) {
+        chat.messages.pop() // 删除空的回复
+      }
     }
   } catch (error) {
     ElMessage.error('发送消息失败')
-  } finally { loading.value = false }
+    chat.messages.pop()
+  } finally { 
+    loading.value = false 
+  }
 }
 
 const saveConversationToBackend = async (chat, isNew) => {

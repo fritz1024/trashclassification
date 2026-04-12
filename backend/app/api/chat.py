@@ -2,6 +2,7 @@
 AI聊天API路由
 """
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
 from app.schemas.chat import (
@@ -55,6 +56,31 @@ async def chat(
             success=False,
             error=str(e)
         )
+
+
+@router.post("/stream")
+async def chat_stream(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    AI聊天接口 (流式返回)
+    """
+    try:
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        logger.info(f"收到流式聊天请求，消息数量: {len(messages)}")
+
+        return StreamingResponse(
+            ai_service.chat_stream(
+                messages,
+                user_id=current_user.id,
+                show_reasoning=request.show_reasoning
+            ),
+            media_type="application/x-ndjson"
+        )
+    except Exception as e:
+        logger.error(f"流式聊天接口异常: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="服务暂时不可用")
 
 
 @router.get("/health")
