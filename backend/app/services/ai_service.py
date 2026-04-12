@@ -56,8 +56,47 @@ TOOLS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_knowledge_base",
+            "description": "搜索垃圾分类或环保相关的专业知识库。当用户询问具体的垃圾分类规则、政策、科普知识或如何处理某种垃圾时调用。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "搜索关键词或问题",
+                    }
+                },
+                "required": ["query"]
+            }
+        }
     }
 ]
+
+def search_knowledge_base(query: str, vector_store) -> str:
+    """搜索知识库（工具函数）"""
+    if not query:
+        return "请提供有效的搜索关键词。"
+    if not vector_store:
+        return "知识库当前不可用。"
+        
+    try:
+        results = vector_store.search(query)
+        if not results:
+            return "知识库中未找到相关内容。"
+            
+        docs = []
+        for i, res in enumerate(results):
+            content = res.get('content', '')
+            docs.append(f"文档片段 {i+1}:\n{content}")
+            
+        return "\n\n---\n\n".join(docs)
+    except Exception as e:
+        logger.error(f"知识库搜索失败: {e}")
+        return "搜索知识库时发生错误。"
 
 def get_user_prediction_history(user_id: int, limit: int = 5) -> str:
     """查询用户的识别历史（工具函数）"""
@@ -163,11 +202,12 @@ class AIService:
         try:
             system_content = """你是一个专业的垃圾分类助手和平台向导，具有以下特点和限制：
 1. 你可以回答垃圾分类、环保、资源回收等问题。
-2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据，或利用联网功能检索最新知识。
-3. 当用户询问其个人的识别记录时，调用 get_user_prediction_history。
-4. 当用户询问系统整体的运行情况、用户量、识别总量时，调用 get_global_stats。
-5. 当用户询问'我是谁'、'我的信息'等个人资料时，调用 get_current_user_info。
-6. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
+2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据，搜索内部知识库，或利用联网功能检索最新知识。
+3. 当用户询问具体的垃圾分类规则、政策、科普知识或如何处理某种垃圾时，调用 search_knowledge_base 搜索知识库。
+4. 当用户询问其个人的识别记录时，调用 get_user_prediction_history。
+5. 当用户询问系统整体的运行情况、用户量、识别总量时，调用 get_global_stats。
+6. 当用户询问'我是谁'、'我的信息'等个人资料时，调用 get_current_user_info。
+7. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
 """
             # 准备请求消息
             current_messages = [{"role": "system", "content": system_content}] + messages
@@ -225,6 +265,9 @@ class AIService:
                         tool_result = get_global_stats()
                     elif func_name == "get_current_user_info":
                         tool_result = get_current_user_info(user_id)
+                    elif func_name == "search_knowledge_base":
+                        query = func_args.get("query", "")
+                        tool_result = search_knowledge_base(query, self.vector_store)
                     else:
                         tool_result = f"未知的工具: {func_name}"
 
