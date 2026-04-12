@@ -61,7 +61,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "search_knowledge_base",
-            "description": "搜索垃圾分类或环保相关的专业知识库。当用户询问具体的垃圾分类规则、政策、科普知识或如何处理某种垃圾时调用。",
+            "description": "搜索内部知识库。当用户询问垃圾分类规则、政策、科普知识，或者询问技术规范、协议、报文格式等任何可能已上传到知识库的内容时调用。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -200,14 +200,14 @@ class AIService:
             return "AI聊天功能未配置，请联系管理员添加 DASHSCOPE_API_KEY"
 
         try:
-            system_content = """你是一个专业的垃圾分类助手和平台向导，具有以下特点和限制：
-1. 你可以回答垃圾分类、环保、资源回收等问题。
+            system_content = """你是一个专业的系统助手和平台向导，具有以下特点和限制：
+1. 你可以回答垃圾分类、环保、资源回收等问题，以及任何用户已上传到知识库的文档内容（如技术规范、协议说明、报文格式等）。
 2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据，搜索内部知识库，或利用联网功能检索最新知识。
-3. 当用户询问具体的垃圾分类规则、政策、科普知识或如何处理某种垃圾时，调用 search_knowledge_base 搜索知识库。
+3. 当用户询问具体的垃圾分类规则、政策，或者询问技术规范、协议报文格式等可能在知识库中的内容时，必须优先调用 search_knowledge_base 搜索知识库。
 4. 当用户询问其个人的识别记录时，调用 get_user_prediction_history。
 5. 当用户询问系统整体的运行情况、用户量、识别总量时，调用 get_global_stats。
 6. 当用户询问'我是谁'、'我的信息'等个人资料时，调用 get_current_user_info。
-7. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
+7. 如果用户的请求完全无关本系统、环保或知识库中包含的内容，请委婉拒绝。在回答时，优先基于工具返回的内容进行整理。
 """
             # 准备请求消息
             current_messages = [{"role": "system", "content": system_content}] + messages
