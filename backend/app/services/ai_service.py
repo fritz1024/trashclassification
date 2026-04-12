@@ -20,7 +20,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_user_prediction_history",
-            "description": "获取当前用户的垃圾分类识别历史记录。当用户问'我识别过什么垃圾'、'我的识别历史'等时调用。",
+            "description": "获取当前用户的垃圾分类识别历史记录以及识别总数。当用户问'我识别过什么垃圾'、'我的识别历史'、'我识别了多少记录'等时调用。",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -44,6 +44,18 @@ TOOLS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_user_info",
+            "description": "获取当前登录用户的基本信息，如用户名、角色、注册时间等。当用户问'我是谁'、'我的信息'等时调用。",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 
@@ -54,6 +66,8 @@ def get_user_prediction_history(user_id: int, limit: int = 5) -> str:
         
     db = SessionLocal()
     try:
+        total_count = db.query(Prediction).filter(Prediction.user_id == user_id).count()
+        
         predictions = db.query(Prediction).filter(
             Prediction.user_id == user_id
         ).order_by(Prediction.created_at.desc()).limit(limit).all()
@@ -61,7 +75,7 @@ def get_user_prediction_history(user_id: int, limit: int = 5) -> str:
         if not predictions:
             return "您还没有进行过垃圾分类识别。"
             
-        result = []
+        result = [f"您总共进行了 {total_count} 次垃圾分类识别。以下是最近的 {len(predictions)} 次记录："]
         for p in predictions:
             time_str = p.created_at.strftime("%Y-%m-%d %H:%M:%S")
             result.append(f"在 {time_str} 识别了：{p.predicted_class} (置信度: {p.confidence}%)")
@@ -70,6 +84,27 @@ def get_user_prediction_history(user_id: int, limit: int = 5) -> str:
     except Exception as e:
         logger.error(f"查询历史失败: {e}")
         return "查询识别历史时发生错误。"
+    finally:
+        db.close()
+
+def get_current_user_info(user_id: int) -> str:
+    """获取当前登录用户信息（工具函数）"""
+    if not user_id:
+        return "您当前是游客/匿名用户，未登录系统。"
+        
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return "未能找到您的用户记录。"
+            
+        time_str = user.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        role_str = "管理员" if user.role in ["admin", "super_admin"] else "普通用户"
+        
+        return f"您的用户名是：{user.username}\n您的角色是：{role_str}\n您的注册时间是：{time_str}\n邮箱：{user.email or '未绑定'}"
+    except Exception as e:
+        logger.error(f"查询用户信息失败: {e}")
+        return "查询用户信息时发生错误。"
     finally:
         db.close()
 
@@ -131,7 +166,8 @@ class AIService:
 2. 你是一个 ReAct Agent，你可以通过调用工具（Tools）来获取系统数据，或利用联网功能检索最新知识。
 3. 当用户询问其个人的识别记录时，调用 get_user_prediction_history。
 4. 当用户询问系统整体的运行情况、用户量、识别总量时，调用 get_global_stats。
-5. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
+5. 当用户询问'我是谁'、'我的信息'等个人资料时，调用 get_current_user_info。
+6. 如果用户的请求无关环保和系统（如写代码、算数），请委婉拒绝。
 """
             # 准备请求消息
             current_messages = [{"role": "system", "content": system_content}] + messages
@@ -187,6 +223,8 @@ class AIService:
                         tool_result = get_user_prediction_history(user_id, limit)
                     elif func_name == "get_global_stats":
                         tool_result = get_global_stats()
+                    elif func_name == "get_current_user_info":
+                        tool_result = get_current_user_info(user_id)
                     else:
                         tool_result = f"未知的工具: {func_name}"
 
